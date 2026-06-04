@@ -254,3 +254,52 @@ const rules = [
     frequent: false
   }
 ];
+
+// ====== РЕНДЕР ======
+const grid = document.getElementById('rules')
+const search = document.getElementById('search')
+let currentTab = 'frequent'
+
+function render(filter = '') {
+  const text = filter.toLowerCase()
+  let filtered = rules
+
+  if (currentTab === 'frequent') {
+    filtered = filtered.filter(r => r.frequent)
+  }
+  if (text) {
+    filtered = filtered.filter(r =>
+      r.id.includes(text) ||
+      r.short.toLowerCase().includes(text) ||
+      r.full.toLowerCase().includes(text) ||
+      r.punishment.toLowerCase().includes(text)
+    )
+  }
+
+  grid.innerHTML = filtered.map(r => `
+    <div class="card">
+      <div class="title">#${r.id} — ${r.short}</div>
+      <div class="desc">${r.full}</div>
+      <div class="punish">${r.punishment}</div>
+    </div>
+  `).join('')
+}
+
+function setTab(tab) {
+  currentTab = tab
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'))
+  document.querySelector(`.tab.${tab}`)?.classList.add('active') // fallback
+  // лучше переключить по тексту:
+  document.querySelectorAll('.tab').forEach(b => {
+    if ((tab === 'frequent' && b.textContent.includes('Частые')) ||
+        (tab === 'all' && b.textContent.includes('Все'))) {
+      b.classList.add('active')
+    }
+  })
+  render(search.value)
+}
+
+search.addEventListener('input', () => render(search.value))
+
+// Первый рендер
+render()
