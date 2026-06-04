@@ -481,23 +481,23 @@ async function deleteUser(userId) {
   renderApp()
 }
 
-// ====== ЗАПУСК ======
-createParticles()
-
-// Проверяем, загрузился ли Supabase, и запускаем приложение
-function initApp() {
-  if (typeof supabase !== 'undefined') {
-    // Загружаем режимы для регистрации
-    supabase.from('modes').select('*').then(function(result) {
-      if (result.data) {
-        modes = result.data
-      }
-      renderApp()
-    })
-  } else {
-    // Ждем загрузки Supabase
-    setTimeout(initApp, 100)
-  }
+// ====== ЗАПУСК ПРИЛОЖЕНИЯ ======
+function startApp() {
+  console.log('Запуск приложения...')
+  createParticles()
+  
+  // Загружаем режимы для регистрации
+  supabase.from('modes').select('*').then(function(result) {
+    if (result.data) {
+      modes = result.data
+      console.log('Режимы загружены:', modes.length)
+    }
+    if (result.error) {
+      console.error('Ошибка загрузки режимов:', result.error)
+    }
+    renderApp()
+  }).catch(function(error) {
+    console.error('Критическая ошибка:', error)
+    document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">Ошибка подключения к базе данных: ' + error.message + '</div>'
+  })
 }
-
-initApp()
