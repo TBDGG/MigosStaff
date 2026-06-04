@@ -9,13 +9,63 @@
 <body>
 
   <div class="particles"></div>
-  <div id="app" class="container"></div>
+  
+  <!-- Отладочный блок -->
+  <div id="debug-info" style="position: fixed; top: 10px; right: 10px; background: #2d1810; border: 2px solid #ffd700; padding: 10px; z-index: 9999; font-size: 10px; color: white; max-width: 300px; display: none;">
+    <div id="debug-text">Загрузка...</div>
+  </div>
+  
+  <div id="app" class="container">
+    <div style="text-align: center; padding: 100px; color: #ffd700; font-size: 14px;">
+      <h1>⏳ Загрузка панели...</h1>
+      <p style="font-size: 10px; color: #a89070; margin-top: 20px;">Если вы видите это сообщение дольше 5 секунд,<br>проверьте консоль (F12)</p>
+    </div>
+  </div>
 
-  <!-- Подключаем Supabase (ОБЯЗАТЕЛЬНО перед нашими скриптами) -->
+  <!-- Подключаем Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+    // Проверяем загрузку Supabase
+    var debugDiv = document.getElementById('debug-info')
+    var debugText = document.getElementById('debug-text')
+    
+    function showDebug(msg, isError) {
+      if (debugDiv) {
+        debugDiv.style.display = 'block'
+        debugText.innerHTML += '<br>' + (isError ? '❌ ' : '✅ ') + msg
+        if (isError) debugText.style.color = '#ff4444'
+      }
+      console.log(msg)
+    }
+    
+    showDebug('HTML загружен')
+    
+    // Проверяем загрузку Supabase библиотеки
+    if (typeof window.supabase !== 'undefined') {
+      showDebug('Supabase библиотека загружена')
+    } else {
+      showDebug('Supabase библиотека НЕ загружена!', true)
+    }
+  </script>
   
   <!-- Наши скрипты -->
   <script src="supabase.js"></script>
   <script src="script.js"></script>
+  
+  <script>
+    // Финальная проверка
+    setTimeout(function() {
+      if (!supabase) {
+        showDebug('Клиент Supabase НЕ создан!', true)
+        showDebug('Проверь URL и ключ в supabase.js', true)
+      }
+      if (!document.getElementById('app').innerHTML.includes('form-card') && 
+          !document.getElementById('app').innerHTML.includes('nav-bar')) {
+        showDebug('Интерфейс НЕ отрендерился!', true)
+        showDebug('Проверь script.js на ошибки', true)
+      }
+    }, 3000)
+  </script>
 </body>
 </html>
