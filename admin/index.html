@@ -9,63 +9,33 @@
 <body>
 
   <div class="particles"></div>
-  
-  <!-- Отладочный блок -->
-  <div id="debug-info" style="position: fixed; top: 10px; right: 10px; background: #2d1810; border: 2px solid #ffd700; padding: 10px; z-index: 9999; font-size: 10px; color: white; max-width: 300px; display: none;">
-    <div id="debug-text">Загрузка...</div>
-  </div>
-  
-  <div id="app" class="container">
-    <div style="text-align: center; padding: 100px; color: #ffd700; font-size: 14px;">
-      <h1>⏳ Загрузка панели...</h1>
-      <p style="font-size: 10px; color: #a89070; margin-top: 20px;">Если вы видите это сообщение дольше 5 секунд,<br>проверьте консоль (F12)</p>
-    </div>
-  </div>
+  <div id="app" class="container"></div>
 
-  <!-- Подключаем Supabase -->
+  <!-- Подключаем Supabase библиотеку -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
+
   <script>
-    // Проверяем загрузку Supabase
-    var debugDiv = document.getElementById('debug-info')
-    var debugText = document.getElementById('debug-text')
+    // ====== КОНФИГУРАЦИЯ SUPABASE ======
+    var SUPABASE_URL = 'https://bedztjcclihaqapabaox.supabase.co'
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB'
     
-    function showDebug(msg, isError) {
-      if (debugDiv) {
-        debugDiv.style.display = 'block'
-        debugText.innerHTML += '<br>' + (isError ? '❌ ' : '✅ ') + msg
-        if (isError) debugText.style.color = '#ff4444'
+    var supabase = null
+    
+    // Ждём полной загрузки страницы и библиотеки
+    window.addEventListener('DOMContentLoaded', function() {
+      console.log('Страница загружена, инициализирую Supabase...')
+      
+      if (window.supabase && window.supabase.createClient) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        console.log('✅ Supabase клиент создан!')
+        startApp()
+      } else {
+        console.error('❌ Supabase не загружен!')
+        document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">Ошибка: Supabase не загружен. Проверьте подключение к интернету.</div>'
       }
-      console.log(msg)
-    }
-    
-    showDebug('HTML загружен')
-    
-    // Проверяем загрузку Supabase библиотеки
-    if (typeof window.supabase !== 'undefined') {
-      showDebug('Supabase библиотека загружена')
-    } else {
-      showDebug('Supabase библиотека НЕ загружена!', true)
-    }
+    })
   </script>
-  
-  <!-- Наши скрипты -->
-  <script src="supabase.js"></script>
+
   <script src="script.js"></script>
-  
-  <script>
-    // Финальная проверка
-    setTimeout(function() {
-      if (!supabase) {
-        showDebug('Клиент Supabase НЕ создан!', true)
-        showDebug('Проверь URL и ключ в supabase.js', true)
-      }
-      if (!document.getElementById('app').innerHTML.includes('form-card') && 
-          !document.getElementById('app').innerHTML.includes('nav-bar')) {
-        showDebug('Интерфейс НЕ отрендерился!', true)
-        showDebug('Проверь script.js на ошибки', true)
-      }
-    }, 3000)
-  </script>
 </body>
 </html>
