@@ -1,77 +1,259 @@
 const rules = [
+  // ===== 1 =====
+  {
+    id: "1.21",
+    short: "Вред серверу",
+    full: "Запрещено создавать лаги, баги или иной вред серверу любыми способами.",
+    punishment: "Перманентная блокировка + снятие привилегии",
+    frequent: true
+  },
+  {
+    id: "1.22",
+    short: "DDOS атаки",
+    full: "Запрещено использование ботов и любых атак на сервер.",
+    punishment: "Перманентная блокировка аккаунта и IP",
+    frequent: true
+  },
+
+  // ===== 2 ЧАТ =====
   {
     id: "2.1",
-    title: "Оскорбление игроков",
-    description: "Запрещены оскорбления игроков в чате.",
-    punishment: "Мут 30м - 2ч",
+    short: "Оскорбление игроков",
+    full: "Запрещены любые оскорбления и унижения игроков в чате.",
+    punishment: "Мут 30 минут – 2 часа",
     frequent: true
   },
+  {
+    id: "2.1.1",
+    short: "Оскорбление родных",
+    full: "Запрещены оскорбления родственников игроков.",
+    punishment: "Мут 1 – 8 часов",
+    frequent: true
+  },
+  {
+    id: "2.1.2",
+    short: "Оскорбление персонала",
+    full: "Запрещено неуважение и оскорбления персонала проекта.",
+    punishment: "Мут 1 – 3 часа",
+    frequent: true
+  },
+  {
+    id: "2.1.3",
+    short: "Оскорбление сервера",
+    full: "Запрещено оскорблять сервер и режимы.",
+    punishment: "Мут 12 – 24 часа",
+    frequent: false
+  },
+  {
+    id: "2.1.4",
+    short: "Запрещённые темы",
+    full: "Запрещено обсуждение ориентации в негативном контексте.",
+    punishment: "Мут 1 час",
+    frequent: false
+  },
+
   {
     id: "2.2",
-    title: "Флуд",
-    description: "Флуд, спам, бессмысленные сообщения.",
-    punishment: "Мут 30м - 2ч",
+    short: "Флуд",
+    full: "Запрещён флуд, спам, бессмысленные сообщения и многократные повторения.",
+    punishment: "Мут 30 минут – 2 часа",
     frequent: true
   },
+  {
+    id: "2.2.1",
+    short: "Попрошайничество",
+    full: "Запрещено выпрашивание привилегий, денег, разбанов.",
+    punishment: "Предупреждение / мут",
+    frequent: true
+  },
+
+  {
+    id: "2.3",
+    short: "Конфликты",
+    full: "Запрещено разжигание политических, религиозных и национальных конфликтов.",
+    punishment: "Мут 2 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.4",
+    short: "Реклама",
+    full: "Запрещена реклама сторонних ресурсов и проектов.",
+    punishment: "Перманентная блокировка IP",
+    frequent: true
+  },
+  {
+    id: "2.4.1",
+    short: "Другие проекты",
+    full: "Запрещено упоминание других серверов и проектов.",
+    punishment: "Мут 3 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.5",
+    short: "Обсуждение наказаний",
+    full: "Запрещено обсуждать действия администрации и наказания.",
+    punishment: "Мут 1–3 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.6",
+    short: "Имперсонация",
+    full: "Запрещено выдавать себя за персонал проекта.",
+    punishment: "Блокировка аккаунта 2–5 часов",
+    frequent: false
+  },
+
+  {
+    id: "2.7",
+    short: "Обман персонала",
+    full: "Запрещено вводить в заблуждение администрацию.",
+    punishment: "Блокировка 2 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.8",
+    short: "Суицид контент",
+    full: "Запрещены призывы к суициду.",
+    punishment: "Мут 1 час",
+    frequent: true
+  },
+
+  {
+    id: "2.9",
+    short: "Дезинформация",
+    full: "Запрещено распространение ложной информации.",
+    punishment: "Мут 1 час – 2 дня",
+    frequent: false
+  },
+
+  {
+    id: "2.9.1",
+    short: "Личные данные",
+    full: "Запрещено распространение персональных данных игроков.",
+    punishment: "Перманентная блокировка",
+    frequent: false
+  },
+
+  {
+    id: "2.10",
+    short: "Обход мута",
+    full: "Запрещено обходить блокировку чата любыми способами.",
+    punishment: "Блокировка 1–3 часа",
+    frequent: true
+  },
+
+  {
+    id: "2.11",
+    short: "Репорты",
+    full: "Запрещены бессмысленные сообщения в /report.",
+    punishment: "Мут 1–3 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.12",
+    short: "18+ темы",
+    full: "Запрещено обсуждение порнографических тем.",
+    punishment: "Мут 1–3 часа",
+    frequent: false
+  },
+
+  {
+    id: "2.13",
+    short: "Угрозы",
+    full: "Запрещены угрозы игрокам и персоналу.",
+    punishment: "Блокировка 4–9 часов",
+    frequent: false
+  },
+
+  {
+    id: "2.13.1",
+    short: "Угрозы серверу",
+    full: "Запрещены угрозы серверу или проекту.",
+    punishment: "Блокировка 3–30 дней",
+    frequent: false
+  },
+
+  // ===== 3 =====
   {
     id: "3.1",
-    title: "Читы",
-    description: "Использование любого стороннего ПО.",
-    punishment: "Бан 30 дней + IP",
+    short: "Читы",
+    full: "Запрещено использование любых читов и стороннего ПО.",
+    punishment: "Бан 30 дней + IP 10 дней",
     frequent: true
   },
   {
-    id: "4.3",
-    title: "Гриферство",
-    description: "Уничтожение построек и регионов игроков.",
-    punishment: "15 дней - перма",
+    id: "3.1.1",
+    short: "Хранение читов",
+    full: "Запрещено хранение запрещённого ПО.",
+    punishment: "Бан 10 дней",
+    frequent: false
+  },
+  {
+    id: "3.1.2",
+    short: "Выход с проверки",
+    full: "Запрещено уходить или игнорировать проверку персонала.",
+    punishment: "Бан до 30 дней",
     frequent: true
   },
+
+  {
+    id: "3.2",
+    short: "Передача аккаунта",
+    full: "Запрещена продажа и передача аккаунтов.",
+    punishment: "Перманент",
+    frequent: true
+  },
+
+  {
+    id: "3.3",
+    short: "Взлом",
+    full: "Запрещено получение чужих аккаунтов обманом.",
+    punishment: "Перманент",
+    frequent: false
+  },
+
+  {
+    id: "3.4",
+    short: "RMT",
+    full: "Запрещена продажа за реальные деньги.",
+    punishment: "Перманент",
+    frequent: false
+  },
+
+  {
+    id: "3.10",
+    short: "Баги",
+    full: "Запрещено использование багов сервера.",
+    punishment: "3–12 часов",
+    frequent: true
+  },
+
+  {
+    id: "3.14",
+    short: "Обход наказаний",
+    full: "Запрещено использование твинов для обхода наказаний.",
+    punishment: "6–12 часов IP",
+    frequent: true
+  },
+
+  // ===== 7 VOICE =====
   {
     id: "7.1",
-    title: "Голосовой чат",
-    description: "Шум, музыка, крики и помехи микрофона.",
-    punishment: "Мут 30 минут",
+    short: "Голосовой чат",
+    full: "Запрещено шуметь, кричать, включать музыку и мешать игрокам.",
+    punishment: "Мут VC 30 минут",
     frequent: true
+  },
+  {
+    id: "7.2",
+    short: "Конфликты в VC",
+    full: "Запрещено разжигание конфликтов в голосовом чате.",
+    punishment: "Мут VC 2 часа",
+    frequent: false
   }
 ];
-
-let tab = "frequent";
-
-function render() {
-  const search = document.getElementById("search").value.toLowerCase();
-  const container = document.getElementById("rules");
-
-  let filtered = rules;
-
-  if (tab === "frequent") {
-    filtered = filtered.filter(r => r.frequent);
-  }
-
-  if (search) {
-    filtered = filtered.filter(r =>
-      r.id.includes(search) ||
-      r.title.toLowerCase().includes(search)
-    );
-  }
-
-  container.innerHTML = filtered.map(r => `
-    <div class="card">
-      <div class="title">${r.id} ${r.title}</div>
-      <div class="desc">${r.description}</div>
-      <div class="punish">${r.punishment}</div>
-    </div>
-  `).join("");
-}
-
-function setTab(t) {
-  tab = t;
-  document.querySelectorAll(".tab").forEach((b, i) => {
-    b.classList.toggle("active", i === (t === "frequent" ? 0 : 1));
-  });
-  render();
-}
-
-document.getElementById("search").addEventListener("input", render);
-
-render();
