@@ -858,11 +858,11 @@ async function handleLogin() {
     try {
       var hashedPassword = btoa(password + username)
       
+      // Ищем пользователя по имени
       var result = await supabase
         .from('users')
         .select('*, roles(*)')
         .eq('username', username)
-        .eq('password_hash', hashedPassword)
       
       if (result.error || !result.data || result.data.length === 0) {
         renderApp()
@@ -873,10 +873,18 @@ async function handleLogin() {
       
       var user = result.data[0]
       
-      if (user.is_blocked) {
+      // Проверяем пароль
+      if (user.password_hash !== hashedPassword) {
         renderApp()
         var errEl2 = document.getElementById('login-error')
-        if (errEl2) errEl2.textContent = 'Ваш аккаунт заблокирован'
+        if (errEl2) errEl2.textContent = 'Неверный пароль'
+        return
+      }
+      
+      if (user.is_blocked) {
+        renderApp()
+        var errEl3 = document.getElementById('login-error')
+        if (errEl3) errEl3.textContent = 'Ваш аккаунт заблокирован'
         return
       }
       
@@ -902,12 +910,11 @@ async function handleLogin() {
       renderApp()
     } catch (e) {
       renderApp()
-      var errEl3 = document.getElementById('login-error')
-      if (errEl3) errEl3.textContent = 'Ошибка: ' + e.message
+      var errEl4 = document.getElementById('login-error')
+      if (errEl4) errEl4.textContent = 'Ошибка: ' + e.message
     }
   }, 2000)
 }
-
 async function handleRegister() {
   var usernameEl = document.getElementById('reg-username')
   var passwordEl = document.getElementById('reg-password')
