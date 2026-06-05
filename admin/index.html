@@ -12,18 +12,14 @@
   <div id="app" class="container">
     <div style="text-align: center; padding: 100px;">
       <h1 style="color: #ffd700; font-size: 20px;">⏳ Загрузка панели...</h1>
-      <p id="status-text" style="color: #a89070; font-size: 10px; margin-top: 15px;">Инициализация...</p>
+      <p id="status-text" style="color: #a89070; font-size: 10px; margin-top: 15px;">Загрузка библиотеки Supabase...</p>
     </div>
   </div>
 
-  <!-- Загружаем Supabase библиотеку -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <script>
-    var SUPABASE_URL = 'https://bedztjcclihaqapabaox.supabase.co'
-    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoс'
+  <script type="module">
+    // Импортируем Supabase как модуль
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     
-    var supabase = null
     var statusText = document.getElementById('status-text')
     
     function updateStatus(msg) {
@@ -31,40 +27,26 @@
       if (statusText) statusText.textContent = msg
     }
     
-    // Сразу проверяем доступность Supabase
-    function initSupabase() {
-      if (window.supabase && typeof window.supabase.createClient === 'function') {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        updateStatus('✅ Клиент создан! Загружаю приложение...')
-        return true
-      }
-      return false
-    }
+    updateStatus('✅ Библиотека загружена!')
     
-    // Пробуем инициализировать сразу
-    if (initSupabase()) {
-      // Загружаем основной скрипт
-      var script = document.createElement('script')
-      script.src = 'script.js'
-      document.body.appendChild(script)
-    } else {
-      // Ждём и пробуем ещё
-      updateStatus('Ожидание библиотеки...')
-      var attempts = 0
-      var interval = setInterval(function() {
-        attempts++
-        if (initSupabase()) {
-          clearInterval(interval)
-          var script = document.createElement('script')
-          script.src = 'script.js'
-          document.body.appendChild(script)
-        } else if (attempts > 30) {
-          clearInterval(interval)
-          updateStatus('❌ Не удалось загрузить Supabase')
-          document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444; font-size: 14px;">❌ Ошибка загрузки. Обновите страницу (F5)</div>'
-        }
-      }, 200)
+    var SUPABASE_URL = 'https://bedztjcclihaqapabaox.supabase.co'
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoс'
+    
+    // Создаём клиент
+    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    updateStatus('✅ Клиент Supabase создан!')
+    
+    // Делаем supabase доступным глобально
+    window.supabase = window.supabaseClient
+    
+    // Загружаем основной скрипт
+    updateStatus('Загрузка приложения...')
+    var script = document.createElement('script')
+    script.src = 'script.js'
+    script.onload = function() {
+      updateStatus('✅ Приложение загружено!')
     }
+    document.body.appendChild(script)
   </script>
 
 </body>
