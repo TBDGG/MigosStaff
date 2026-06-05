@@ -6,7 +6,7 @@ var users = []
 var roles = []
 var modes = []
 
-console.log('🚀 script.js загружен, supabase:', !!supabase)
+console.log('🚀 app.js загружен, supabase:', !!supabase)
 
 // ====== ЧАСТИЦЫ ======
 function createParticles() {
@@ -29,7 +29,7 @@ function createParticles() {
   }
 }
 
-// ====== РЕНДЕР ФОРМ ======
+// ====== РЕНДЕР ======
 function renderLogin() {
   return '<div class="form-card">' +
     '<h2>Вход в панель</h2>' +
@@ -58,12 +58,12 @@ function renderRegister() {
   return '<div class="form-card">' +
     '<h2>Регистрация</h2>' +
     '<div class="form-group">' +
-      '<label>Никнейм</label>' +
-      '<input id="reg-username" placeholder="Придумайте ник..." />' +
+      '<label>Никнейм (латинские буквы)</label>' +
+      '<input id="reg-username" placeholder="Только латиница и цифры" />' +
     '</div>' +
     '<div class="form-group">' +
       '<label>Пароль</label>' +
-      '<input id="reg-password" type="password" placeholder="Придумайте пароль..." />' +
+      '<input id="reg-password" type="password" placeholder="Минимум 6 символов" />' +
     '</div>' +
     '<div class="form-group">' +
       '<label>Режим</label>' +
@@ -125,7 +125,6 @@ function renderDashboard() {
   return html
 }
 
-// ====== ГЛАВНЫЙ РЕНДЕР ======
 function renderApp() {
   var app = document.getElementById('app')
   if (!app) return
@@ -212,13 +211,16 @@ async function handleRegister() {
     return
   }
   
+  console.log('Отправляю:', { username: username, mode: mode })
+  
   try {
-    // Кодируем кириллицу для безопасной передачи
     var result = await supabase.rpc('register_user', {
-      p_username: encodeURIComponent(username),
-      p_password: encodeURIComponent(password),
-      p_mode: encodeURIComponent(mode)
+      p_username: username,
+      p_password: password,
+      p_mode: mode
     })
+    
+    console.log('Результат:', result)
     
     if (result.error) {
       if (errorEl) errorEl.textContent = 'Ошибка: ' + result.error.message
@@ -231,8 +233,8 @@ async function handleRegister() {
       renderApp()
     }, 2000)
   } catch (e) {
+    console.error('Ошибка регистрации:', e)
     if (errorEl) errorEl.textContent = 'Ошибка: ' + e.message
-    console.error(e)
   }
 }
 
@@ -248,17 +250,30 @@ createParticles()
 
 if (supabase) {
   supabase.from('modes').select('*').then(function(result) {
+    console.log('Результат загрузки режимов:', result)
+    
     if (result.data && result.data.length > 0) {
       modes = result.data
       console.log('✅ Режимы загружены:', modes.length)
     } else {
-      console.log('⚠️ Нет режимов в базе, использую стандартные')
-      modes = [{ name: 'Выживание' }, { name: 'Гриферский' }]
+      console.log('⚠️ Нет режимов в базе')
+      // Используем стандартные, если база пустая
+      modes = [
+        { name: 'Выживание' },
+        { name: 'Гриферский' },
+        { name: 'SkyBlock' },
+        { name: 'MiniGames' },
+        { name: 'Другое' }
+      ]
     }
     renderApp()
   }).catch(function(error) {
     console.error('Ошибка загрузки режимов:', error)
-    modes = [{ name: 'Выживание' }]
+    modes = [
+      { name: 'Выживание' },
+      { name: 'Гриферский' },
+      { name: 'Другое' }
+    ]
     renderApp()
   })
 } else {
