@@ -29,17 +29,31 @@ function createParticles() {
   }
 }
 
+// ====== ФУНКЦИЯ ДЛЯ ЗАПРОСОВ БЕЗ КИРИЛЛИЦЫ В ЗАГОЛОВКАХ ======
+async function safeRPC(functionName, params) {
+  // Кодируем все параметры в base64 чтобы избежать проблем с кодировкой
+  var encodedParams = {}
+  for (var key in params) {
+    if (params.hasOwnProperty(key)) {
+      // Переводим строку в массив байт и кодируем в base64
+      encodedParams[key] = btoa(unescape(encodeURIComponent(params[key])))
+    }
+  }
+  
+  return await supabase.rpc(functionName, encodedParams)
+}
+
 // ====== РЕНДЕР ======
 function renderLogin() {
   return '<div class="form-card">' +
     '<h2>Вход в панель</h2>' +
     '<div class="form-group">' +
       '<label>Никнейм</label>' +
-      '<input id="login-username" placeholder="Введите ник..." />' +
+      '<input id="login-username" placeholder="Введите ник..." autocomplete="off" />' +
     '</div>' +
     '<div class="form-group">' +
       '<label>Пароль</label>' +
-      '<input id="login-password" type="password" placeholder="Введите пароль..." />' +
+      '<input id="login-password" type="password" placeholder="Введите пароль..." autocomplete="off" />' +
     '</div>' +
     '<div id="login-error" class="error-msg"></div>' +
     '<button onclick="handleLogin()">Войти</button>' +
@@ -52,18 +66,18 @@ function renderLogin() {
 function renderRegister() {
   var options = ''
   for (var i = 0; i < modes.length; i++) {
-    options += '<option value="' + modes[i].name + '">' + modes[i].name + '</option>'
+    options += '<option value="' + modes[i].id + '">' + modes[i].name + '</option>'
   }
   
   return '<div class="form-card">' +
     '<h2>Регистрация</h2>' +
     '<div class="form-group">' +
-      '<label>Никнейм (латинские буквы)</label>' +
-      '<input id="reg-username" placeholder="Только латиница и цифры" />' +
+      '<label>Никнейм</label>' +
+      '<input id="reg-username" placeholder="Введите ник..." autocomplete="off" />' +
     '</div>' +
     '<div class="form-group">' +
       '<label>Пароль</label>' +
-      '<input id="reg-password" type="password" placeholder="Минимум 6 символов" />' +
+      '<input id="reg-password" type="password" placeholder="Минимум 6 символов" autocomplete="off" />' +
     '</div>' +
     '<div class="form-group">' +
       '<label>Режим</label>' +
@@ -196,7 +210,7 @@ async function handleRegister() {
   
   var username = usernameEl ? usernameEl.value.trim() : ''
   var password = passwordEl ? passwordEl.value : ''
-  var mode = modeEl ? modeEl.value : 'Выживание'
+  var modeId = modeEl ? modeEl.value : ''
   
   if (errorEl) errorEl.textContent = ''
   if (successEl) successEl.textContent = ''
@@ -211,40 +225,51 @@ async function handleRegister() {
     return
   }
   
-  console.log('Отправляю данные для регистрации...')
+  // Находим название режима по ID
+  var modeName = ''
+  for (var i = 0; i < modes.length; i++) {
+    if (modes[i].id === modeId) {
+      modeName = modes[i].name
+      break
+    }
+  }
+  
+  console.log('Регистрация:', username, modeName)
   
   try {
-    // Используем прямой запрос к таблице вместо RPC
-    var { data, error } = await supabase
-      .from('users')
-      .insert([
-        { 
-          username: username, 
-          password_hash: password,
-          mode: mode 
-        }
-      ])
-      .select()
-    
-    console.log('Результат:', { data, error })
-    
-    if (error) {
-      if (error.message && error.message.includes('duplicate')) {
-        if (errorEl) errorEl.textContent = 'Пользователь с таким ником уже существует'
-      } else {
-        if (errorEl) errorEl.textContent = 'Ошибка: ' + error.message
+    // Отправляем запрос через fetch напрямую к REST API
+    var response = await fetch(
+      'https://bedztjcclihaqapabaox.supabase.co/rest/v1/rpc/register_user',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB'
+        },
+        body: JSON.stringify({
+          p_username: username,
+          p_password: password,
+          p_mode: modeName
+        })
       }
-      return
-    }
+    )
     
-    if (successEl) successEl.textContent = '✅ Регистрация успешна! Ожидайте одобрения.'
-    setTimeout(function() {
-      currentPage = 'login'
-      renderApp()
-    }, 2000)
+    var result = await response.json()
+    console.log('Результат регистрации:', result)
+    
+    if (response.ok) {
+      if (successEl) successEl.textContent = '✅ Регистрация успешна! Ожидайте одобрения.'
+      setTimeout(function() {
+        currentPage = 'login'
+        renderApp()
+      }, 2000)
+    } else {
+      if (errorEl) errorEl.textContent = 'Ошибка: ' + (result.message || 'Неизвестная ошибка')
+    }
   } catch (e) {
     console.error('Ошибка регистрации:', e)
-    if (errorEl) errorEl.textContent = 'Ошибка: ' + e.message
+    if (errorEl) errorEl.textContent = 'Ошибка соединения: ' + e.message
   }
 }
 
@@ -267,22 +292,21 @@ if (supabase) {
       console.log('✅ Режимы загружены:', modes.length)
     } else {
       console.log('⚠️ Нет режимов в базе')
-      // Используем стандартные, если база пустая
       modes = [
-        { name: 'Выживание' },
-        { name: 'Гриферский' },
-        { name: 'SkyBlock' },
-        { name: 'MiniGames' },
-        { name: 'Другое' }
+        { id: '1', name: 'Выживание' },
+        { id: '2', name: 'Гриферский' },
+        { id: '3', name: 'SkyBlock' },
+        { id: '4', name: 'MiniGames' },
+        { id: '5', name: 'Другое' }
       ]
     }
     renderApp()
   }).catch(function(error) {
     console.error('Ошибка загрузки режимов:', error)
     modes = [
-      { name: 'Выживание' },
-      { name: 'Гриферский' },
-      { name: 'Другое' }
+      { id: '1', name: 'Выживание' },
+      { id: '2', name: 'Гриферский' },
+      { id: '3', name: 'Другое' }
     ]
     renderApp()
   })
