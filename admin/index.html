@@ -12,56 +12,58 @@
   <div id="app" class="container">
     <div style="text-align: center; padding: 100px;">
       <h1 style="color: #ffd700; font-size: 20px;">⏳ Загрузка панели...</h1>
-      <p id="status-text" style="color: #a89070; font-size: 10px; margin-top: 15px;">Подключение к Supabase...</p>
+      <p id="status-text" style="color: #a89070; font-size: 10px; margin-top: 15px;">Инициализация...</p>
     </div>
   </div>
 
-  <!-- Сначала загружаем Supabase библиотеку -->
+  <!-- Загружаем Supabase библиотеку -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Настройки Supabase -->
   <script>
     var SUPABASE_URL = 'https://bedztjcclihaqapabaox.supabase.co'
-    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB'
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoс'
     
     var supabase = null
     var statusText = document.getElementById('status-text')
     
-    function updateStatus(text) {
-      if (statusText) statusText.textContent = text
-      console.log(text)
+    function updateStatus(msg) {
+      console.log(msg)
+      if (statusText) statusText.textContent = msg
     }
     
-    updateStatus('Проверка библиотеки Supabase...')
-    
-    // Ждём полной загрузки страницы
-    window.onload = function() {
-      updateStatus('Страница загружена, инициализация...')
-      
-      // Проверяем что библиотека загрузилась
-      if (typeof window.supabase !== 'undefined') {
-        updateStatus('Библиотека Supabase найдена!')
-        
-        if (typeof window.supabase.createClient === 'function') {
-          // Создаём клиент
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-          updateStatus('✅ Клиент Supabase создан! Загружаю скрипт...')
-          
-          // Загружаем основной скрипт
-          var scriptTag = document.createElement('script')
-          scriptTag.src = 'script.js'
-          scriptTag.onload = function() {
-            updateStatus('✅ Основной скрипт загружен!')
-          }
-          document.body.appendChild(scriptTag)
-        } else {
-          updateStatus('❌ Ошибка: createClient не функция')
-          document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">❌ Ошибка версии Supabase</div>'
-        }
-      } else {
-        updateStatus('❌ Библиотека Supabase не загружена')
-        document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">❌ Не могу загрузить Supabase. Проверьте интернет.</div>'
+    // Сразу проверяем доступность Supabase
+    function initSupabase() {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        updateStatus('✅ Клиент создан! Загружаю приложение...')
+        return true
       }
+      return false
+    }
+    
+    // Пробуем инициализировать сразу
+    if (initSupabase()) {
+      // Загружаем основной скрипт
+      var script = document.createElement('script')
+      script.src = 'script.js'
+      document.body.appendChild(script)
+    } else {
+      // Ждём и пробуем ещё
+      updateStatus('Ожидание библиотеки...')
+      var attempts = 0
+      var interval = setInterval(function() {
+        attempts++
+        if (initSupabase()) {
+          clearInterval(interval)
+          var script = document.createElement('script')
+          script.src = 'script.js'
+          document.body.appendChild(script)
+        } else if (attempts > 30) {
+          clearInterval(interval)
+          updateStatus('❌ Не удалось загрузить Supabase')
+          document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444; font-size: 14px;">❌ Ошибка загрузки. Обновите страницу (F5)</div>'
+        }
+      }, 200)
     }
   </script>
 
