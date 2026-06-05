@@ -29,8 +29,7 @@ function createParticles() {
   }
 }
 
-
-// ====== РЕНДЕР ======
+// ====== РЕНДЕР ФОРМ ======
 function renderLogin() {
   return '<div class="form-card">' +
     '<h2>Вход в панель</h2>' +
@@ -126,12 +125,13 @@ function renderDashboard() {
   return html
 }
 
+// ====== ГЛАВНЫЙ РЕНДЕР ======
 function renderApp() {
   var app = document.getElementById('app')
   if (!app) return
   
   if (!supabase) {
-    app.innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">Ошибка: Supabase не подключен</div>'
+    app.innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">❌ Ошибка подключения к базе данных</div>'
     return
   }
   
@@ -247,16 +247,16 @@ createParticles()
 
 if (supabase) {
   supabase.from('modes').select('*').then(function(result) {
-    if (result.data) {
+    if (result.data && result.data.length > 0) {
       modes = result.data
       console.log('✅ Режимы загружены:', modes.length)
     } else {
-      console.log('⚠️ Нет режимов, использую стандартные')
+      console.log('⚠️ Нет режимов в базе, использую стандартные')
       modes = [{ name: 'Выживание' }, { name: 'Гриферский' }]
     }
     renderApp()
   }).catch(function(error) {
-    console.error('Ошибка:', error)
+    console.error('Ошибка загрузки режимов:', error)
     modes = [{ name: 'Выживание' }]
     renderApp()
   })
