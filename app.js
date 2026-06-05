@@ -237,39 +237,45 @@ async function handleRegister() {
   console.log('Регистрация:', username, modeName)
   
   try {
-    // Отправляем запрос через fetch напрямую к REST API
-    var response = await fetch(
-      'https://bedztjcclihaqapabaox.supabase.co/rest/v1/rpc/register_user',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlZHp0amNjbGloYXFhcGFiYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1OTAwNTUsImV4cCI6MjA5NjE2NjA1NX0.kkZD_3SIkSKkdwrIAKZtqhs3NIaWrEHL2G51ItgRIoB'
-        },
-        body: JSON.stringify({
-          p_username: username,
-          p_password: password,
-          p_mode: modeName
-        })
-      }
-    )
+    // Сначала проверим, нет ли такого пользователя
+    var checkResult = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', username)
     
-    var result = await response.json()
-    console.log('Результат регистрации:', result)
-    
-    if (response.ok) {
-      if (successEl) successEl.textContent = '✅ Регистрация успешна! Ожидайте одобрения.'
-      setTimeout(function() {
-        currentPage = 'login'
-        renderApp()
-      }, 2000)
-    } else {
-      if (errorEl) errorEl.textContent = 'Ошибка: ' + (result.message || 'Неизвестная ошибка')
+    if (checkResult.data && checkResult.data.length > 0) {
+      if (errorEl) errorEl.textContent = 'Пользователь с таким ником уже существует'
+      return
     }
+    
+    // Хэшируем пароль вручную (упрощённо)
+    var hashedPassword = btoa(password + username)
+    
+    // Вставляем напрямую в таблицу
+    var insertResult = await supabase
+      .from('users')
+      .insert({
+        username: username,
+        password_hash: hashedPassword,
+        mode: modeName
+      })
+      .select()
+    
+    console.log('Результат:', insertResult)
+    
+    if (insertResult.error) {
+      if (errorEl) errorEl.textContent = 'Ошибка: ' + insertResult.error.message
+      return
+    }
+    
+    if (successEl) successEl.textContent = '✅ Регистрация успешна! Ожидайте одобрения.'
+    setTimeout(function() {
+      currentPage = 'login'
+      renderApp()
+    }, 2000)
   } catch (e) {
     console.error('Ошибка регистрации:', e)
-    if (errorEl) errorEl.textContent = 'Ошибка соединения: ' + e.message
+    if (errorEl) errorEl.textContent = 'Ошибка: ' + e.message
   }
 }
 
