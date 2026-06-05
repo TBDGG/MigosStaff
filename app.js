@@ -213,10 +213,11 @@ async function handleRegister() {
   }
   
   try {
+    // Кодируем кириллицу для безопасной передачи
     var result = await supabase.rpc('register_user', {
-      p_username: username,
-      p_password: password,
-      p_mode: mode
+      p_username: encodeURIComponent(username),
+      p_password: encodeURIComponent(password),
+      p_mode: encodeURIComponent(mode)
     })
     
     if (result.error) {
