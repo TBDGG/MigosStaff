@@ -211,19 +211,29 @@ async function handleRegister() {
     return
   }
   
-  console.log('Отправляю:', { username: username, mode: mode })
+  console.log('Отправляю данные для регистрации...')
   
   try {
-    var result = await supabase.rpc('register_user', {
-      p_username: username,
-      p_password: password,
-      p_mode: mode
-    })
+    // Используем прямой запрос к таблице вместо RPC
+    var { data, error } = await supabase
+      .from('users')
+      .insert([
+        { 
+          username: username, 
+          password_hash: password,
+          mode: mode 
+        }
+      ])
+      .select()
     
-    console.log('Результат:', result)
+    console.log('Результат:', { data, error })
     
-    if (result.error) {
-      if (errorEl) errorEl.textContent = 'Ошибка: ' + result.error.message
+    if (error) {
+      if (error.message && error.message.includes('duplicate')) {
+        if (errorEl) errorEl.textContent = 'Пользователь с таким ником уже существует'
+      } else {
+        if (errorEl) errorEl.textContent = 'Ошибка: ' + error.message
+      }
       return
     }
     
