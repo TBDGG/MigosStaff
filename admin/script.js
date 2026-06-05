@@ -1,9 +1,12 @@
 // ====== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ======
+var supabase = window.supabaseClient || window.supabase
 var currentUser = null
 var currentPage = 'login'
 var users = []
 var roles = []
 var modes = []
+
+console.log('🚀 script.js загружен, supabase:', !!supabase)
 
 // ====== ЧАСТИЦЫ ======
 function createParticles() {
@@ -25,6 +28,7 @@ function createParticles() {
     container.appendChild(particle)
   }
 }
+
 
 // ====== РЕНДЕР ======
 function renderLogin() {
@@ -238,21 +242,25 @@ function handleLogout() {
 }
 
 // ====== ЗАПУСК ======
-console.log('🚀 script.js выполнен')
+console.log('🚀 Запуск приложения...')
 createParticles()
 
-// Загружаем режимы и запускаем приложение
-supabase.from('modes').select('*').then(function(result) {
-  if (result.data) {
-    modes = result.data
-    console.log('✅ Режимы загружены:', modes.length)
-  } else {
-    console.log('⚠️ Режимы не найдены, создаю стандартные...')
-    modes = [{ name: 'Выживание' }, { name: 'Гриферский' }, { name: 'SkyBlock' }]
-  }
-  renderApp()
-}).catch(function(error) {
-  console.error('Ошибка загрузки режимов:', error)
-  modes = [{ name: 'Выживание' }]
-  renderApp()
-})
+if (supabase) {
+  supabase.from('modes').select('*').then(function(result) {
+    if (result.data) {
+      modes = result.data
+      console.log('✅ Режимы загружены:', modes.length)
+    } else {
+      console.log('⚠️ Нет режимов, использую стандартные')
+      modes = [{ name: 'Выживание' }, { name: 'Гриферский' }]
+    }
+    renderApp()
+  }).catch(function(error) {
+    console.error('Ошибка:', error)
+    modes = [{ name: 'Выживание' }]
+    renderApp()
+  })
+} else {
+  console.error('❌ Supabase не доступен')
+  document.getElementById('app').innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">❌ Ошибка подключения к базе данных</div>'
+}
