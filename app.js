@@ -29,20 +29,6 @@ function createParticles() {
   }
 }
 
-// ====== ФУНКЦИЯ ДЛЯ ЗАПРОСОВ БЕЗ КИРИЛЛИЦЫ В ЗАГОЛОВКАХ ======
-async function safeRPC(functionName, params) {
-  // Кодируем все параметры в base64 чтобы избежать проблем с кодировкой
-  var encodedParams = {}
-  for (var key in params) {
-    if (params.hasOwnProperty(key)) {
-      // Переводим строку в массив байт и кодируем в base64
-      encodedParams[key] = btoa(unescape(encodeURIComponent(params[key])))
-    }
-  }
-  
-  return await supabase.rpc(functionName, encodedParams)
-}
-
 // ====== РЕНДЕР ======
 function renderLogin() {
   return '<div class="form-card">' +
@@ -176,10 +162,13 @@ async function handleLogin() {
   }
   
   try {
-    var result = await supabase.rpc('login_user', { 
-      p_username: username, 
-      p_password: password 
-    })
+    var hashedPassword = btoa(password + username)
+    
+    var result = await supabase
+      .from('users')
+      .select('*, roles(*)')
+      .eq('username', username)
+      .eq('password_hash', hashedPassword)
     
     if (result.error || !result.data || result.data.length === 0) {
       if (errorEl) errorEl.textContent = 'Неверный ник или пароль'
@@ -193,7 +182,22 @@ async function handleLogin() {
       return
     }
     
-    currentUser = user
+    // Преобразуем данные
+    currentUser = {
+      id: user.id,
+      username: user.username,
+      mode: user.mode,
+      role_id: user.role_id,
+      is_approved: user.is_approved,
+      is_blocked: user.is_blocked,
+      is_super_admin: user.is_super_admin,
+      play_hours: user.play_hours,
+      salary: user.salary,
+      warns: user.warns,
+      role_name: user.roles ? user.roles.name : null,
+      role_color: user.roles ? user.roles.color : null
+    }
+    
     renderApp()
   } catch (e) {
     if (errorEl) errorEl.textContent = 'Ошибка: ' + e.message
@@ -237,7 +241,7 @@ async function handleRegister() {
   console.log('Регистрация:', username, modeName)
   
   try {
-    // Сначала проверим, нет ли такого пользователя
+    // Проверяем, нет ли такого пользователя
     var checkResult = await supabase
       .from('users')
       .select('id')
@@ -248,10 +252,10 @@ async function handleRegister() {
       return
     }
     
-    // Хэшируем пароль вручную (упрощённо)
+    // Хэшируем пароль
     var hashedPassword = btoa(password + username)
     
-    // Вставляем напрямую в таблицу
+    // Вставляем в таблицу
     var insertResult = await supabase
       .from('users')
       .insert({
