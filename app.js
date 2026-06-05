@@ -162,13 +162,13 @@ async function handleLogin() {
   }
   
   try {
-    var hashedPassword = btoa(password + username)
-    
+    // Временно ищем только по имени
     var result = await supabase
       .from('users')
       .select('*, roles(*)')
       .eq('username', username)
-      .eq('password_hash', hashedPassword)
+    
+    console.log('Результат входа:', result)
     
     if (result.error || !result.data || result.data.length === 0) {
       if (errorEl) errorEl.textContent = 'Неверный ник или пароль'
@@ -177,12 +177,21 @@ async function handleLogin() {
     
     var user = result.data[0]
     
+    // Проверяем пароль
+    var hashedPassword = btoa(password + username)
+    console.log('Введённый хэш:', hashedPassword)
+    console.log('Хэш в базе:', user.password_hash)
+    
+    if (user.password_hash !== hashedPassword) {
+      if (errorEl) errorEl.textContent = 'Неверный пароль'
+      return
+    }
+    
     if (user.is_blocked) {
       if (errorEl) errorEl.textContent = 'Ваш аккаунт заблокирован'
       return
     }
     
-    // Преобразуем данные
     currentUser = {
       id: user.id,
       username: user.username,
