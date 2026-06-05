@@ -1,3 +1,147 @@
+// ====== ТЕМЫ ======
+var themes = {
+  dark: {
+    name: '🌙 Тёмная',
+    bg: '#0a0a0f',
+    card: '#151025',
+    border: '#3a3050',
+    accent: '#d4a574',
+    text: '#e0d5c0',
+    text2: '#9070a0',
+    input: '#151025',
+    hover: '#1a1530'
+  },
+  green: {
+    name: '🌿 Зелёная',
+    bg: '#0a1a0a',
+    card: '#152515',
+    border: '#305030',
+    accent: '#74d474',
+    text: '#d0e0d0',
+    text2: '#709070',
+    input: '#152515',
+    hover: '#1a301a'
+  },
+  blue: {
+    name: '🌊 Синяя',
+    bg: '#0a0a1a',
+    card: '#151525',
+    border: '#303050',
+    accent: '#7474d4',
+    text: '#d0d0e0',
+    text2: '#707090',
+    input: '#151525',
+    hover: '#1a1a30'
+  },
+  red: {
+    name: '🔥 Красная',
+    bg: '#1a0a0a',
+    card: '#251515',
+    border: '#503030',
+    accent: '#d47474',
+    text: '#e0d0d0',
+    text2: '#907070',
+    input: '#251515',
+    hover: '#301a1a'
+  },
+  purple: {
+    name: '💜 Фиолетовая',
+    bg: '#100a1a',
+    card: '#1a1525',
+    border: '#403050',
+    accent: '#b474d4',
+    text: '#d0c0e0',
+    text2: '#807090',
+    input: '#1a1525',
+    hover: '#251a30'
+  },
+  minecraft: {
+    name: '⛏ Minecraft',
+    bg: '#1a0a0a',
+    card: '#2d1810',
+    border: '#5c3a1e',
+    accent: '#ffd700',
+    text: '#f0e6d2',
+    text2: '#a89070',
+    input: '#2d1810',
+    hover: '#3d1c1c'
+  }
+}
+
+var currentTheme = localStorage.getItem('theme') || 'dark'
+
+function applyTheme() {
+  var theme = themes[currentTheme]
+  var root = document.documentElement
+  
+  root.style.setProperty('--bg', theme.bg)
+  root.style.setProperty('--card', theme.card)
+  root.style.setProperty('--border', theme.border)
+  root.style.setProperty('--accent', theme.accent)
+  root.style.setProperty('--text', theme.text)
+  root.style.setProperty('--text2', theme.text2)
+  root.style.setProperty('--input', theme.input)
+  root.style.setProperty('--hover', theme.hover)
+  
+  localStorage.setItem('theme', currentTheme)
+  
+  // Обновляем фон body
+  document.body.style.background = theme.bg
+  
+  // Обновляем стили всех элементов
+  var style = document.getElementById('theme-style')
+  if (!style) {
+    style = document.createElement('style')
+    style.id = 'theme-style'
+    document.head.appendChild(style)
+  }
+  
+  style.textContent = `
+    body::before {
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.015) 3px, rgba(255,255,255,0.015) 6px),
+                  repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255,255,255,0.015) 3px, rgba(255,255,255,0.015) 6px),
+                  linear-gradient(180deg, ${theme.card} 0%, ${theme.bg} 50%, ${theme.bg} 100%) !important;
+    }
+    input, select, textarea {
+      background: ${theme.input} !important;
+      border-color: ${theme.border} !important;
+      color: ${theme.text} !important;
+    }
+    .form-card, .table-container, .stat-card, .nav-bar {
+      background: ${theme.card} !important;
+      border-color: ${theme.border} !important;
+    }
+    button {
+      background: ${theme.card} !important;
+      border-color: ${theme.border} !important;
+      color: ${theme.text2} !important;
+    }
+    button:hover {
+      background: ${theme.hover} !important;
+      border-color: ${theme.accent} !important;
+      color: ${theme.accent} !important;
+    }
+    h1, h2, h3, .stat-value, th, .nav-user span:first-child, .form-card h2 {
+      color: ${theme.accent} !important;
+    }
+    .stat-label, .form-group label, .form-links a, .subtitle, .user-mode {
+      color: ${theme.text2} !important;
+    }
+    td, .nav-user {
+      color: ${theme.text} !important;
+    }
+    .modal {
+      border-color: ${theme.accent} !important;
+      box-shadow: 0 0 30px ${theme.accent}33 !important;
+    }
+    .status-approved { color: ${currentTheme === 'green' ? '#44ff44' : '#74d474'} !important; }
+    .status-pending { color: ${theme.accent} !important; }
+    .particle {
+      color: ${theme.accent}66 !important;
+    }
+  `
+}
+
 // ====== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ======
 var supabase = window.supabaseClient || window.supabase
 var currentUser = null
@@ -9,6 +153,7 @@ var modes = []
 var userWarns = []
 var userBans = []
 var userBonuses = []
+var userFilter = { mode: '', sort: 'created_at', search: '' }
 
 console.log('🚀 app.js загружен')
 
@@ -16,6 +161,8 @@ console.log('🚀 app.js загружен')
 function createParticles() {
   var container = document.querySelector('.particles')
   if (!container) return
+  
+  container.innerHTML = ''
   
   var icons = ['✦', '✧', '⛏', '⚔', '🪓', '🔮', '⭐', '💎', '🏹', '🛡']
   
@@ -41,7 +188,7 @@ function showLoading(text, callback, delay) {
   app.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; min-height: 400px;">' +
     '<div style="text-align: center;">' +
       '<div style="font-size: 48px; animation: bounce 0.6s ease infinite alternate;">⛏️</div>' +
-      '<div style="color: #ffd700; font-size: 14px; margin-top: 20px; font-family: \'Press Start 2P\', cursive;">' + (text || 'Загрузка...') + '</div>' +
+      '<div style="color: var(--accent); font-size: 14px; margin-top: 20px;">' + (text || 'Загрузка...') + '</div>' +
     '</div>' +
   '</div>'
   
@@ -134,11 +281,7 @@ function checkCustomMode() {
   var select = document.getElementById('reg-mode')
   var customInput = document.getElementById('reg-custom-mode')
   if (select && customInput) {
-    if (select.value === '__custom__') {
-      customInput.style.display = 'block'
-    } else {
-      customInput.style.display = 'none'
-    }
+    customInput.style.display = select.value === '__custom__' ? 'block' : 'none'
   }
 }
 
@@ -147,19 +290,22 @@ function renderDashboard() {
   
   var isAdmin = currentUser.is_super_admin || (currentUser.admin_mode && currentUser.is_approved)
   
-  var html = '<div class="nav-bar">' +
-    '<div class="nav-user">' +
-      '<span style="color: ' + (currentUser.role_color || '#ffd700') + '; font-size: 11px;">' +
-        (currentUser.is_super_admin ? '👑 ' : '') + currentUser.username +
-      '</span>' +
-      '<span class="user-mode">' + (currentUser.mode || 'Не указан') + '</span>'
-  
-  if (currentUser.position) {
-    html += '<span style="color: #a89070; font-size: 8px;">' + currentUser.position + '</span>'
+  // Выпадающий список тем
+  var themeOptions = ''
+  for (var key in themes) {
+    themeOptions += '<option value="' + key + '"' + (currentTheme === key ? ' selected' : '') + '>' + themes[key].name + '</option>'
   }
   
-  html += '</div>' +
+  var html = '<div class="nav-bar">' +
+    '<div class="nav-user">' +
+      '<span style="color: ' + (currentUser.role_color || 'var(--accent)') + '; font-size: 11px;">' +
+        (currentUser.is_super_admin ? '👑 ' : '') + currentUser.username +
+      '</span>' +
+      '<span class="user-mode">' + (currentUser.mode || 'Не указан') + '</span>' +
+      (currentUser.position ? '<span style="color: var(--text2); font-size: 8px;">' + currentUser.position + '</span>' : '') +
+    '</div>' +
     '<div class="nav-actions">' +
+      '<select id="theme-select" onchange="changeTheme()" style="width: auto; min-width: 160px; padding: 8px 12px; font-size: 9px;">' + themeOptions + '</select>' +
       '<button onclick="showProfile()">👤 Профиль</button>' +
       (isAdmin ? '<button onclick="switchTab(\'users\')">👥 Пользователи</button>' : '') +
       (isAdmin ? '<button onclick="switchTab(\'roles\')">🎨 Роли</button>' : '') +
@@ -179,17 +325,18 @@ function renderDashboard() {
   return html
 }
 
+function changeTheme() {
+  var select = document.getElementById('theme-select')
+  if (select) {
+    currentTheme = select.value
+    applyTheme()
+    createParticles()
+  }
+}
+
 // ====== ВКЛАДКИ ======
 function switchTab(tab) {
   currentTab = tab
-  var content = document.getElementById('tab-content')
-  if (!content) return
-  
-  var buttons = document.querySelectorAll('.nav-actions button')
-  for (var i = 0; i < buttons.length; i++) {
-    buttons[i].classList.remove('active')
-  }
-  
   if (tab === 'users') {
     loadUsers()
   } else if (tab === 'roles') {
@@ -198,25 +345,33 @@ function switchTab(tab) {
 }
 
 // ====== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ ======
-var userFilter = { mode: '', sort: 'created_at', search: '' }
-
 async function loadUsers() {
   var content = document.getElementById('tab-content')
   if (!content) return
   
-  content.innerHTML = '<div style="text-align: center; padding: 40px; color: #ffd700;">⏳ Загрузка...</div>'
+  content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--accent);">⏳ Загрузка...</div>'
+  
+  // Загружаем роли для фильтра
+  var rolesResult = await supabase.from('roles').select('*').order('priority', { ascending: false })
+  roles = rolesResult.data || []
   
   var query = supabase.from('users').select('*, roles(*)')
   
-  // Фильтр по режиму админа
   if (!currentUser.is_super_admin && currentUser.admin_mode) {
     query = query.eq('mode', currentUser.admin_mode)
   }
   
-  var result = await query.order(userFilter.sort, { ascending: userFilter.sort === 'salary' || userFilter.sort === 'play_hours' ? false : true })
+  var result = await query
   
   if (result.data) {
     users = result.data
+    
+    // Сортируем по приоритету роли
+    users.sort(function(a, b) {
+      var priorityA = a.roles ? a.roles.priority : 0
+      var priorityB = b.roles ? b.roles.priority : 0
+      return priorityB - priorityA
+    })
     
     // Применяем фильтры
     if (userFilter.mode) {
@@ -228,6 +383,7 @@ async function loadUsers() {
     }
   }
   
+  // Собираем список режимов
   var modesList = []
   for (var i = 0; i < users.length; i++) {
     if (modesList.indexOf(users[i].mode) === -1 && users[i].mode) {
@@ -241,13 +397,20 @@ async function loadUsers() {
     modeFilterOptions += '<option value="' + modesList[j] + '"' + sel + '>' + modesList[j] + '</option>'
   }
   
+  // Фильтр по ролям
+  var roleFilterOptions = '<option value="">Все должности</option>'
+  for (var k = 0; k < roles.length; k++) {
+    roleFilterOptions += '<option value="' + roles[k].id + '">' + roles[k].name + ' (приоритет ' + roles[k].priority + ')</option>'
+  }
+  
   var html = '<div class="table-container">' +
     '<h3>📋 Пользователи (' + users.length + ')</h3>' +
     '<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;">' +
-      '<input id="user-search" placeholder="🔍 Поиск по нику..." value="' + userFilter.search + '" style="max-width: 250px;" oninput="updateUserFilter()" />' +
-      '<select id="user-mode-filter" onchange="updateUserFilter()" style="max-width: 200px;">' + modeFilterOptions + '</select>' +
-      '<select id="user-sort" onchange="updateUserFilter()" style="max-width: 200px;">' +
-        '<option value="created_at"' + (userFilter.sort === 'created_at' ? ' selected' : '') + '>По дате</option>' +
+      '<input id="user-search" placeholder="🔍 Поиск по нику..." value="' + userFilter.search + '" style="max-width: 200px;" oninput="updateUserFilter()" />' +
+      '<select id="user-mode-filter" onchange="updateUserFilter()" style="max-width: 180px; width: auto;">' + modeFilterOptions + '</select>' +
+      '<select id="user-role-filter" onchange="updateUserFilter()" style="max-width: 180px; width: auto;">' + roleFilterOptions + '</select>' +
+      '<select id="user-sort" onchange="updateUserFilter()" style="max-width: 180px; width: auto;">' +
+        '<option value="priority"' + (userFilter.sort === 'priority' ? ' selected' : '') + '>По приоритету</option>' +
         '<option value="play_hours"' + (userFilter.sort === 'play_hours' ? ' selected' : '') + '>По часам</option>' +
         '<option value="salary"' + (userFilter.sort === 'salary' ? ' selected' : '') + '>По зарплате</option>' +
         '<option value="username"' + (userFilter.sort === 'username' ? ' selected' : '') + '>По нику</option>' +
@@ -266,16 +429,16 @@ async function loadUsers() {
       '</tr></thead>' +
       '<tbody>'
   
-  for (var k = 0; k < users.length; k++) {
-    var u = users[k]
+  for (var l = 0; l < users.length; l++) {
+    var u = users[l]
     var status = u.is_blocked ? '<span class="status-blocked">Заблок</span>' : u.is_approved ? '<span class="status-approved">Активен</span>' : '<span class="status-pending">Ждёт</span>'
-    var nickColor = u.roles ? u.roles.color : '#c4a882'
+    var nickColor = u.roles ? u.roles.color : 'var(--accent)'
     if (u.is_super_admin) nickColor = '#ffd700'
     
     html += '<tr>' +
       '<td><a onclick="showUserProfile(\'' + u.id + '\')" style="color: ' + nickColor + '; cursor: pointer; text-decoration: underline;">' + u.username + (u.is_super_admin ? ' 👑' : '') + '</a></td>' +
       '<td>' + (u.mode || '-') + '</td>' +
-      '<td>' + (u.position || '-') + '</td>' +
+      '<td style="color: ' + nickColor + ';">' + (u.roles ? u.roles.name : (u.position || '-')) + '</td>' +
       '<td>' + (u.play_hours || 0) + 'ч</td>' +
       '<td>' + (u.salary || 0) + '₽</td>' +
       '<td>' + (u.warns || 0) + '</td>' +
@@ -291,10 +454,16 @@ function updateUserFilter() {
   var searchEl = document.getElementById('user-search')
   var modeEl = document.getElementById('user-mode-filter')
   var sortEl = document.getElementById('user-sort')
+  var roleEl = document.getElementById('user-role-filter')
   
   if (searchEl) userFilter.search = searchEl.value
   if (modeEl) userFilter.mode = modeEl.value
   if (sortEl) userFilter.sort = sortEl.value
+  
+  // Фильтр по роли
+  if (roleEl && roleEl.value) {
+    users = users.filter(function(u) { return u.role_id === roleEl.value })
+  }
   
   loadUsers()
 }
@@ -303,19 +472,15 @@ function updateUserFilter() {
 async function showUserProfile(userId) {
   var user = null
   for (var i = 0; i < users.length; i++) {
-    if (users[i].id === userId) {
-      user = users[i]
-      break
-    }
+    if (users[i].id === userId) { user = users[i]; break }
   }
   if (!user) return
   
   var content = document.getElementById('tab-content')
   if (!content) return
   
-  content.innerHTML = '<div style="text-align: center; padding: 40px; color: #ffd700;">⏳ Загрузка профиля...</div>'
+  content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--accent);">⏳ Загрузка профиля...</div>'
   
-  // Загружаем варны, баны, премии
   var warnsResult = await supabase.from('warns').select('*').eq('user_id', userId).order('created_at', { ascending: false })
   var bansResult = await supabase.from('bans').select('*').eq('user_id', userId).order('created_at', { ascending: false })
   var bonusesResult = await supabase.from('bonuses').select('*').eq('user_id', userId).order('created_at', { ascending: false })
@@ -324,7 +489,17 @@ async function showUserProfile(userId) {
   userBans = bansResult.data || []
   userBonuses = bonusesResult.data || []
   
-  var nickColor = user.roles ? user.roles.color : '#ffd700'
+  // Загружаем роли для выпадающего списка
+  var rolesResult = await supabase.from('roles').select('*').order('priority', { ascending: false })
+  var allRoles = rolesResult.data || []
+  
+  var roleOptions = '<option value="">Без должности</option>'
+  for (var r = 0; r < allRoles.length; r++) {
+    var selected = user.role_id === allRoles[r].id ? ' selected' : ''
+    roleOptions += '<option value="' + allRoles[r].id + '"' + selected + '>' + allRoles[r].name + ' (приоритет ' + allRoles[r].priority + ')</option>'
+  }
+  
+  var nickColor = user.roles ? user.roles.color : 'var(--accent)'
   if (user.is_super_admin) nickColor = '#ffd700'
   
   var html = '<div style="margin-bottom: 20px;">' +
@@ -346,14 +521,15 @@ async function showUserProfile(userId) {
   '</div>' +
   '<div class="table-container">' +
     '<h3>👤 ' + user.username + '</h3>' +
-    '<p style="color: #a89070; font-size: 10px;">Режим: <span style="color: #ffd700;">' + (user.mode || '-') + '</span></p>' +
-    '<p style="color: #a89070; font-size: 10px;">Должность: <span style="color: #ffd700;">' + (user.position || '-') + '</span></p>' +
-    '<p style="color: #a89070; font-size: 10px;">Роль: <span style="color: ' + nickColor + ';">' + (user.roles ? user.roles.name : 'Нет') + '</span></p>' +
-    '<p style="color: #a89070; font-size: 10px;">Статус: ' + (user.is_blocked ? '<span style="color: #ff4444;">Заблокирован</span>' : user.is_approved ? '<span style="color: #44ff44;">Активен</span>' : '<span style="color: #ffd700;">Ожидает одобрения</span>') + '</p>' +
-    '<p style="color: #a89070; font-size: 10px;">Предупреждения: <span style="color: #ff4444;">' + (user.notes || 'Нет') + '</span></p>' +
+    '<div class="form-group">' +
+      '<label>Должность (роль)</label>' +
+      '<select id="profile-role" onchange="updateUserRole(\'' + userId + '\')">' + roleOptions + '</select>' +
+    '</div>' +
+    '<p style="color: var(--text2); font-size: 10px;">Режим: <span style="color: var(--accent);">' + (user.mode || '-') + '</span></p>' +
+    '<p style="color: var(--text2); font-size: 10px;">Статус: ' + (user.is_blocked ? '<span class="status-blocked">Заблокирован</span>' : user.is_approved ? '<span class="status-approved">Активен</span>' : '<span class="status-pending">Ожидает одобрения</span>') + '</p>' +
+    '<p style="color: var(--text2); font-size: 10px;">Предупреждения: <span style="color: #d47474;">' + (user.notes || 'Нет') + '</span></p>' +
   '</div>'
   
-  // Кнопки действий
   if (user.id !== currentUser.id) {
     html += '<div style="display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap;">' +
       '<button onclick="showWarnModal(\'' + userId + '\')">⚠️ Варн</button>' +
@@ -366,59 +542,37 @@ async function showUserProfile(userId) {
     '</div>'
   }
   
-  // Варны
   html += '<div class="table-container"><h3>⚠️ Варны</h3>'
   if (userWarns.length === 0) {
-    html += '<p style="color: #a89070; font-size: 10px;">Нет варнов</p>'
+    html += '<p style="color: var(--text2); font-size: 10px;">Нет варнов</p>'
   } else {
     html += '<table><thead><tr><th>Причина</th><th>Штраф</th><th>Кто выдал</th><th>Дата</th><th>Истекает</th></tr></thead><tbody>'
     for (var w = 0; w < userWarns.length; w++) {
-      var warn = userWarns[w]
-      html += '<tr>' +
-        '<td>' + warn.reason + '</td>' +
-        '<td>' + warn.fine + '₽</td>' +
-        '<td>' + warn.created_by + '</td>' +
-        '<td>' + formatDate(warn.created_at) + '</td>' +
-        '<td>' + (warn.expires_at ? formatDate(warn.expires_at) : 'Навсегда') + '</td>' +
-      '</tr>'
+      html += '<tr><td>' + userWarns[w].reason + '</td><td>' + userWarns[w].fine + '₽</td><td>' + userWarns[w].created_by + '</td><td>' + formatDate(userWarns[w].created_at) + '</td><td>' + (userWarns[w].expires_at ? formatDate(userWarns[w].expires_at) : 'Навсегда') + '</td></tr>'
     }
     html += '</tbody></table>'
   }
   html += '</div>'
   
-  // Баны
   html += '<div class="table-container"><h3>🔒 Баны</h3>'
   if (userBans.length === 0) {
-    html += '<p style="color: #a89070; font-size: 10px;">Нет банов</p>'
+    html += '<p style="color: var(--text2); font-size: 10px;">Нет банов</p>'
   } else {
     html += '<table><thead><tr><th>Причина</th><th>Длительность</th><th>Кто выдал</th><th>Дата</th></tr></thead><tbody>'
     for (var b = 0; b < userBans.length; b++) {
-      var ban = userBans[b]
-      html += '<tr>' +
-        '<td>' + ban.reason + '</td>' +
-        '<td>' + (ban.is_permanent ? 'Навсегда' : ban.duration) + '</td>' +
-        '<td>' + ban.created_by + '</td>' +
-        '<td>' + formatDate(ban.created_at) + '</td>' +
-      '</tr>'
+      html += '<tr><td>' + userBans[b].reason + '</td><td>' + (userBans[b].is_permanent ? 'Навсегда' : userBans[b].duration) + '</td><td>' + userBans[b].created_by + '</td><td>' + formatDate(userBans[b].created_at) + '</td></tr>'
     }
     html += '</tbody></table>'
   }
   html += '</div>'
   
-  // Премии
   html += '<div class="table-container"><h3>💰 Премии</h3>'
   if (userBonuses.length === 0) {
-    html += '<p style="color: #a89070; font-size: 10px;">Нет премий</p>'
+    html += '<p style="color: var(--text2); font-size: 10px;">Нет премий</p>'
   } else {
     html += '<table><thead><tr><th>Сумма</th><th>Причина</th><th>Кто выдал</th><th>Дата</th></tr></thead><tbody>'
     for (var bn = 0; bn < userBonuses.length; bn++) {
-      var bonus = userBonuses[bn]
-      html += '<tr>' +
-        '<td style="color: #44ff44;">+' + bonus.amount + '₽</td>' +
-        '<td>' + bonus.reason + '</td>' +
-        '<td>' + bonus.created_by + '</td>' +
-        '<td>' + formatDate(bonus.created_at) + '</td>' +
-      '</tr>'
+      html += '<tr><td style="color: #74d474;">+' + userBonuses[bn].amount + '₽</td><td>' + userBonuses[bn].reason + '</td><td>' + userBonuses[bn].created_by + '</td><td>' + formatDate(userBonuses[bn].created_at) + '</td></tr>'
     }
     html += '</tbody></table>'
   }
@@ -427,7 +581,32 @@ async function showUserProfile(userId) {
   content.innerHTML = html
 }
 
-// ====== МОДАЛЬНЫЕ ОКНА ======
+async function updateUserRole(userId) {
+  var roleSelect = document.getElementById('profile-role')
+  if (!roleSelect) return
+  
+  var roleId = roleSelect.value || null
+  
+  var updateData = { role_id: roleId }
+  
+  // Если роль не выбрана, оставляем position
+  if (!roleId) {
+    var user = null
+    for (var i = 0; i < users.length; i++) {
+      if (users[i].id === userId) { user = users[i]; break }
+    }
+    if (user) {
+      updateData.position = user.position || ''
+    }
+  } else {
+    updateData.position = null
+  }
+  
+  await supabase.from('users').update(updateData).eq('id', userId)
+  showUserProfile(userId)
+}
+
+// ====== МОДАЛКИ (без изменений) ======
 function showWarnModal(userId) {
   var modal = document.createElement('div')
   modal.className = 'modal-overlay'
@@ -466,7 +645,6 @@ async function issueWarn(userId) {
     expires_at: expiresAt
   })
   
-  // Обновляем счётчик варнов и зарплату
   var user = null
   for (var i = 0; i < users.length; i++) {
     if (users[i].id === userId) { user = users[i]; break }
@@ -504,7 +682,6 @@ function showBanModal(userId) {
 async function issueBan(userId) {
   var reason = document.getElementById('ban-reason').value
   var duration = document.getElementById('ban-duration').value
-  
   if (!reason) return
   
   var isPermanent = duration === 'permanent'
@@ -556,9 +733,7 @@ async function issueBonus(userId) {
     if (users[i].id === userId) { user = users[i]; break }
   }
   if (user) {
-    await supabase.from('users').update({
-      salary: (user.salary || 0) + amount
-    }).eq('id', userId)
+    await supabase.from('users').update({ salary: (user.salary || 0) + amount }).eq('id', userId)
   }
   
   document.querySelector('.modal-overlay').remove()
@@ -591,7 +766,6 @@ async function saveHours(userId) {
   showUserProfile(userId)
 }
 
-// ====== ДЕЙСТВИЯ ======
 async function approveUser(userId) {
   await supabase.from('users').update({ is_approved: true }).eq('id', userId)
   showUserProfile(userId)
@@ -622,7 +796,7 @@ async function loadRoles() {
   var content = document.getElementById('tab-content')
   if (!content) return
   
-  content.innerHTML = '<div style="text-align: center; padding: 40px; color: #ffd700;">⏳ Загрузка...</div>'
+  content.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--accent);">⏳ Загрузка...</div>'
   
   var query = supabase.from('roles').select('*').order('priority', { ascending: false })
   if (!currentUser.is_super_admin && currentUser.admin_mode) {
@@ -633,8 +807,8 @@ async function loadRoles() {
   if (result.data) roles = result.data
   
   var html = '<div class="table-container">' +
-    '<h3>🎨 Роли</h3>' +
-    '<button onclick="showCreateRole()" style="margin-bottom: 15px;">+ Создать роль</button>' +
+    '<h3>🎨 Должности (роли)</h3>' +
+    '<button onclick="showCreateRole()" style="margin-bottom: 15px;">+ Создать должность</button>' +
     '<table><thead><tr>' +
       '<th>Название</th><th>Цвет</th><th>Приоритет</th><th>Режим</th><th>Зарплата</th><th>Штраф</th><th>Действия</th>' +
     '</tr></thead><tbody>'
@@ -645,7 +819,7 @@ async function loadRoles() {
     
     html += '<tr>' +
       '<td style="color: ' + r.color + '">' + r.name + '</td>' +
-      '<td><span style="display: inline-block; width: 20px; height: 20px; background: ' + r.color + '; border: 2px solid #5c3a1e;"></span></td>' +
+      '<td><span style="display: inline-block; width: 20px; height: 20px; background: ' + r.color + '; border: 2px solid var(--border);"></span></td>' +
       '<td>' + r.priority + '</td>' +
       '<td>' + r.mode + '</td>' +
       '<td>' + salaryType + '</td>' +
@@ -671,10 +845,10 @@ function showCreateRole() {
   var modal = document.createElement('div')
   modal.className = 'modal-overlay'
   modal.innerHTML = '<div class="modal">' +
-    '<h3>🎨 Новая роль</h3>' +
+    '<h3>🎨 Новая должность</h3>' +
     '<div class="form-group"><label>Название</label><input id="role-name" placeholder="Модератор" /></div>' +
-    '<div class="form-group"><label>Цвет</label><input id="role-color" type="color" value="#ffd700" /></div>' +
-    '<div class="form-group"><label>Приоритет</label><input id="role-priority" type="number" value="1" /></div>' +
+    '<div class="form-group"><label>Цвет</label><input id="role-color" type="color" value="#d4a574" /></div>' +
+    '<div class="form-group"><label>Приоритет (чем выше, тем главнее)</label><input id="role-priority" type="number" value="1" /></div>' +
     '<div class="form-group"><label>Режим</label><select id="role-mode">' + modeOptions + '</select></div>' +
     '<div class="form-group"><label>Тип зарплаты</label><select id="role-salary-type"><option value="hourly">Почасовая</option><option value="fixed">Фиксированная</option></select></div>' +
     '<div class="form-group"><label>Сумма (₽)</label><input id="role-salary-value" type="number" value="0" /></div>' +
@@ -689,23 +863,16 @@ function showCreateRole() {
 
 async function createRole() {
   var name = document.getElementById('role-name').value
-  var color = document.getElementById('role-color').value
-  var priority = parseInt(document.getElementById('role-priority').value) || 0
-  var mode = document.getElementById('role-mode').value
-  var salaryType = document.getElementById('role-salary-type').value
-  var salaryValue = parseInt(document.getElementById('role-salary-value').value) || 0
-  var warnFine = parseInt(document.getElementById('role-warn-fine').value) || 0
-  
-  if (!name) return alert('Введите название роли')
+  if (!name) return alert('Введите название')
   
   var result = await supabase.from('roles').insert({
     name: name,
-    color: color,
-    priority: priority,
-    mode: mode,
-    salary_type: salaryType,
-    salary_value: salaryValue,
-    warn_fine: warnFine
+    color: document.getElementById('role-color').value,
+    priority: parseInt(document.getElementById('role-priority').value) || 0,
+    mode: document.getElementById('role-mode').value,
+    salary_type: document.getElementById('role-salary-type').value,
+    salary_value: parseInt(document.getElementById('role-salary-value').value) || 0,
+    warn_fine: parseInt(document.getElementById('role-warn-fine').value) || 0
   })
   
   if (result.error) {
@@ -726,14 +893,13 @@ async function editRole(roleId) {
   var allModes = ['Выживание', 'Гриферский', 'РП-Школа', 'Анархия', 'SKYPVP']
   var modeOptions = ''
   for (var j = 0; j < allModes.length; j++) {
-    var sel = role.mode === allModes[j] ? ' selected' : ''
-    modeOptions += '<option value="' + allModes[j] + '"' + sel + '>' + allModes[j] + '</option>'
+    modeOptions += '<option value="' + allModes[j] + '"' + (role.mode === allModes[j] ? ' selected' : '') + '>' + allModes[j] + '</option>'
   }
   
   var modal = document.createElement('div')
   modal.className = 'modal-overlay'
   modal.innerHTML = '<div class="modal">' +
-    '<h3>✏️ Редактирование роли</h3>' +
+    '<h3>✏️ Редактирование</h3>' +
     '<div class="form-group"><label>Название</label><input id="edit-role-name" value="' + role.name + '" /></div>' +
     '<div class="form-group"><label>Цвет</label><input id="edit-role-color" type="color" value="' + role.color + '" /></div>' +
     '<div class="form-group"><label>Приоритет</label><input id="edit-role-priority" type="number" value="' + role.priority + '" /></div>' +
@@ -750,7 +916,7 @@ async function editRole(roleId) {
 }
 
 async function updateRole(roleId) {
-  var data = {
+  await supabase.from('roles').update({
     name: document.getElementById('edit-role-name').value,
     color: document.getElementById('edit-role-color').value,
     priority: parseInt(document.getElementById('edit-role-priority').value) || 0,
@@ -758,28 +924,20 @@ async function updateRole(roleId) {
     salary_type: document.getElementById('edit-role-salary-type').value,
     salary_value: parseInt(document.getElementById('edit-role-salary-value').value) || 0,
     warn_fine: parseInt(document.getElementById('edit-role-warn-fine').value) || 0
-  }
+  }).eq('id', roleId)
   
-  await supabase.from('roles').update(data).eq('id', roleId)
   document.querySelector('.modal-overlay').remove()
   loadRoles()
 }
 
 async function deleteRole(roleId) {
-  if (!confirm('Удалить роль?')) return
+  if (!confirm('Удалить должность?')) return
   await supabase.from('roles').delete().eq('id', roleId)
   loadRoles()
 }
 
 // ====== ПРОФИЛЬ ======
-function showProfile() {
-  var content = document.getElementById('tab-content')
-  if (!content) return
-  
-  loadUserWarns()
-}
-
-async function loadUserWarns() {
+async function showProfile() {
   var content = document.getElementById('tab-content')
   if (!content) return
   
@@ -790,48 +948,36 @@ async function loadUserWarns() {
   userBonuses = bonusesResult.data || []
   
   var html = '<div class="stats-grid">' +
-    '<div class="stat-card">' +
-      '<div class="stat-value">' + (currentUser.play_hours || 0) + 'ч</div>' +
-      '<div class="stat-label">Наиграно часов</div>' +
-    '</div>' +
-    '<div class="stat-card">' +
-      '<div class="stat-value">' + (currentUser.salary || 0) + '₽</div>' +
-      '<div class="stat-label">Зарплата</div>' +
-    '</div>' +
-    '<div class="stat-card">' +
-      '<div class="stat-value">' + (currentUser.warns || 0) + '</div>' +
-      '<div class="stat-label">Варнов</div>' +
-    '</div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.play_hours || 0) + 'ч</div><div class="stat-label">Наиграно часов</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.salary || 0) + '₽</div><div class="stat-label">Зарплата</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.warns || 0) + '</div><div class="stat-label">Варнов</div></div>' +
   '</div>' +
   '<div class="table-container">' +
     '<h3>👤 Мой профиль</h3>' +
-    '<p style="color: #a89070; font-size: 10px;">Ник: <span style="color: #ffd700;">' + currentUser.username + '</span></p>' +
-    '<p style="color: #a89070; font-size: 10px;">Режим: <span style="color: #ffd700;">' + (currentUser.mode || 'Не указан') + '</span></p>' +
-    '<p style="color: #a89070; font-size: 10px;">Должность: <span style="color: #ffd700;">' + (currentUser.position || 'Не указана') + '</span></p>' +
+    '<p style="color: var(--text2); font-size: 10px;">Ник: <span style="color: var(--accent);">' + currentUser.username + '</span></p>' +
+    '<p style="color: var(--text2); font-size: 10px;">Режим: <span style="color: var(--accent);">' + (currentUser.mode || 'Не указан') + '</span></p>' +
+    '<p style="color: var(--text2); font-size: 10px;">Должность: <span style="color: ' + (currentUser.role_color || 'var(--accent)') + ';">' + (currentUser.role_name || (currentUser.position || 'Не указана')) + '</span></p>' +
   '</div>' +
   '<div class="table-container"><h3>⚠️ Мои варны</h3>'
   
   if (userWarns.length === 0) {
-    html += '<p style="color: #a89070; font-size: 10px;">Нет варнов</p>'
+    html += '<p style="color: var(--text2); font-size: 10px;">Нет варнов</p>'
   } else {
     html += '<table><thead><tr><th>Причина</th><th>Штраф</th><th>Дата</th><th>Истекает</th></tr></thead><tbody>'
     for (var i = 0; i < userWarns.length; i++) {
-      var w = userWarns[i]
-      html += '<tr><td>' + w.reason + '</td><td>' + w.fine + '₽</td><td>' + formatDate(w.created_at) + '</td><td>' + (w.expires_at ? formatDate(w.expires_at) : 'Навсегда') + '</td></tr>'
+      html += '<tr><td>' + userWarns[i].reason + '</td><td>' + userWarns[i].fine + '₽</td><td>' + formatDate(userWarns[i].created_at) + '</td><td>' + (userWarns[i].expires_at ? formatDate(userWarns[i].expires_at) : 'Навсегда') + '</td></tr>'
     }
     html += '</tbody></table>'
   }
   html += '</div>'
   
-  // Премии
   html += '<div class="table-container"><h3>💰 Мои премии</h3>'
   if (userBonuses.length === 0) {
-    html += '<p style="color: #a89070; font-size: 10px;">Нет премий</p>'
+    html += '<p style="color: var(--text2); font-size: 10px;">Нет премий</p>'
   } else {
     html += '<table><thead><tr><th>Сумма</th><th>Причина</th><th>Дата</th></tr></thead><tbody>'
     for (var j = 0; j < userBonuses.length; j++) {
-      var bn = userBonuses[j]
-      html += '<tr><td style="color: #44ff44;">+' + bn.amount + '₽</td><td>' + bn.reason + '</td><td>' + formatDate(bn.created_at) + '</td></tr>'
+      html += '<tr><td style="color: #74d474;">+' + userBonuses[j].amount + '₽</td><td>' + userBonuses[j].reason + '</td><td>' + formatDate(userBonuses[j].created_at) + '</td></tr>'
     }
     html += '</tbody></table>'
   }
@@ -858,7 +1004,6 @@ async function handleLogin() {
     try {
       var hashedPassword = btoa(password + username)
       
-      // Ищем пользователя по имени
       var result = await supabase
         .from('users')
         .select('*, roles(*)')
@@ -873,7 +1018,6 @@ async function handleLogin() {
       
       var user = result.data[0]
       
-      // Проверяем пароль
       if (user.password_hash !== hashedPassword) {
         renderApp()
         var errEl2 = document.getElementById('login-error')
@@ -915,6 +1059,7 @@ async function handleLogin() {
     }
   }, 2000)
 }
+
 async function handleRegister() {
   var usernameEl = document.getElementById('reg-username')
   var passwordEl = document.getElementById('reg-password')
@@ -934,24 +1079,12 @@ async function handleRegister() {
   if (errorEl) errorEl.textContent = ''
   if (successEl) successEl.textContent = ''
   
-  if (username.length < 3) {
-    if (errorEl) errorEl.textContent = 'Ник должен быть не менее 3 символов'
-    return
-  }
-  
-  if (password.length < 6) {
-    if (errorEl) errorEl.textContent = 'Пароль должен быть не менее 6 символов'
-    return
-  }
-  
-  if (!mode) {
-    if (errorEl) errorEl.textContent = 'Выберите режим'
-    return
-  }
+  if (username.length < 3) { if (errorEl) errorEl.textContent = 'Ник должен быть не менее 3 символов'; return }
+  if (password.length < 6) { if (errorEl) errorEl.textContent = 'Пароль должен быть не менее 6 символов'; return }
+  if (!mode) { if (errorEl) errorEl.textContent = 'Выберите режим'; return }
   
   try {
     var checkResult = await supabase.from('users').select('id').eq('username', username)
-    
     if (checkResult.data && checkResult.data.length > 0) {
       if (errorEl) errorEl.textContent = 'Пользователь с таким ником уже существует'
       return
@@ -965,16 +1098,10 @@ async function handleRegister() {
       mode: mode
     })
     
-    if (insertResult.error) {
-      if (errorEl) errorEl.textContent = 'Ошибка: ' + insertResult.error.message
-      return
-    }
+    if (insertResult.error) { if (errorEl) errorEl.textContent = 'Ошибка: ' + insertResult.error.message; return }
     
     if (successEl) successEl.textContent = '✅ Регистрация успешна! Ожидайте одобрения.'
-    setTimeout(function() {
-      currentPage = 'login'
-      renderApp()
-    }, 2000)
+    setTimeout(function() { currentPage = 'login'; renderApp() }, 2000)
   } catch (e) {
     if (errorEl) errorEl.textContent = 'Ошибка: ' + e.message
   }
@@ -993,7 +1120,7 @@ function renderApp() {
   if (!app) return
   
   if (!supabase) {
-    app.innerHTML = '<div style="text-align: center; padding: 100px; color: #ff4444;">❌ Ошибка подключения</div>'
+    app.innerHTML = '<div style="text-align: center; padding: 100px; color: #d47474;">❌ Ошибка подключения</div>'
     return
   }
   
@@ -1004,23 +1131,20 @@ function renderApp() {
   }
 }
 
-// ====== НАВИГАЦИЯ ======
 function navigateTo(page) {
   currentPage = page
   renderApp()
 }
 
 // ====== ЗАПУСК ======
+applyTheme()
 createParticles()
 
 if (supabase) {
   if (loadSession()) {
     console.log('✅ Сессия загружена:', currentUser.username)
     supabase.from('users').select('is_blocked').eq('id', currentUser.id).single().then(function(r) {
-      if (r.data && r.data.is_blocked) {
-        clearSession()
-        currentUser = null
-      }
+      if (r.data && r.data.is_blocked) { clearSession(); currentUser = null }
       renderApp()
     })
   } else {
