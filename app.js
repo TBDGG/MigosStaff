@@ -477,6 +477,28 @@ async function showUserProfile(userId) {
       '<div class="stat-card"><div class="stat-value" style="color:#ffd700">' + (user.pending_salary || 0) + '₽</div><div class="stat-label">Ожидает</div></div>' +
       '<div class="stat-card"><div class="stat-value" style="color:var(--success-text)">' + (user.issued_salary || 0) + '₽</div><div class="stat-label">Выдано</div></div>' +
     '</div>'
+
+    async function updateUserRole(userId) {
+  var sel = document.getElementById('profile-role')
+  if (!sel) return
+  
+  var roleId = sel.value || null
+  await supabase.from('users').update({ role_id: roleId }).eq('id', userId)
+  await recalculateSalary(userId)
+  
+  if (userId === currentUser.id) {
+    var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
+    if (uRes.data) {
+      currentUser.pending_salary = uRes.data.pending_salary
+      currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
+      currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
+      currentUser.role_id = uRes.data.role_id
+      saveSession()
+    }
+  }
+  
+  showUserProfile(userId)
+}
   
   // Контакты
   html += '<div class="table-container"><h3>📞 Контакты</h3>' +
