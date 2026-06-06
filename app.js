@@ -15,7 +15,6 @@ var themeGroups = {
 }
 
 var themes = {
-  // Геймерские
   minecraft: {
     name: '⛏ Minecraft', group: 'Геймерские', isGamer: true,
     bg: '#1a0a0a', bg2: '#241510', card: '#2d1810', card2: '#3d1c1c',
@@ -44,7 +43,6 @@ var themes = {
     text: '#f0f0d2', text2: '#909070', input: '#2d2d10', hover: '#3d3d1c',
     danger: '#503030', dangerHover: '#301515', success: '#305030', successText: '#74d474'
   },
-  // Однотонные
   dark: {
     name: '🌙 Тёмная', group: 'Однотонные', isGamer: false,
     bg: '#0a0a0f', bg2: '#0a0a0f', card: '#151520', card2: '#1a1a28',
@@ -117,13 +115,9 @@ var currentFont = localStorage.getItem('font') || 'Press Start 2P'
 
 function applyTheme() {
   var theme = themes[currentTheme]
-  if (!theme) {
-    currentTheme = 'dark'
-    theme = themes['dark']
-  }
+  if (!theme) { currentTheme = 'dark'; theme = themes['dark'] }
   
   var root = document.documentElement
-  
   root.style.setProperty('--bg', theme.bg)
   root.style.setProperty('--bg2', theme.bg2)
   root.style.setProperty('--card', theme.card)
@@ -143,7 +137,6 @@ function applyTheme() {
   localStorage.setItem('theme', currentTheme)
   document.body.style.background = theme.bg
   
-  // Частицы только для геймерских тем
   if (theme.isGamer) {
     document.body.classList.remove('plain-theme')
     root.style.setProperty('--particles-display', 'block')
@@ -155,18 +148,14 @@ function applyTheme() {
 
 function applyFont() {
   var font = fonts[currentFont]
+  if (!font) { currentFont = 'Press Start 2P'; font = fonts['Press Start 2P'] }
   var root = document.documentElement
   var link = document.getElementById('font-link')
-  
   root.style.setProperty('--font', font.family)
   root.style.setProperty('--font-size', currentFont.includes('Press') ? '10px' : '13px')
   root.style.setProperty('--font-size-sm', currentFont.includes('Press') ? '8px' : '11px')
   root.style.setProperty('--font-size-lg', currentFont.includes('Press') ? '14px' : '18px')
-  
-  if (link) {
-    link.href = 'https://fonts.googleapis.com/css2?family=' + font.import + '&display=swap'
-  }
-  
+  if (link) link.href = 'https://fonts.googleapis.com/css2?family=' + font.import + '&display=swap'
   localStorage.setItem('font', currentFont)
 }
 
@@ -188,7 +177,8 @@ function createParticles() {
   var container = document.querySelector('.particles')
   if (!container) return
   container.innerHTML = ''
-  if (!themes[currentTheme].isGamer) return
+  var theme = themes[currentTheme]
+  if (!theme || !theme.isGamer) return
   
   var icons = ['✦', '✧', '⛏', '⚔', '🪓', '🔮', '⭐', '💎', '🏹', '🛡']
   for (var i = 0; i < 25; i++) {
@@ -219,6 +209,7 @@ function clearSession() { localStorage.removeItem('currentUser') }
 function formatDate(d) { if (!d) return '-'; var dt = new Date(d); return dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'}) }
 function currentMonth() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth()+1)).slice(-2) }
 
+// ====== ЗАРПЛАТА ======
 async function recalculateSalary(userId) {
   var userRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
   if (!userRes.data) return
@@ -285,7 +276,6 @@ function renderDashboard() {
   if (!currentUser) return renderLogin()
   var isAdmin = currentUser.is_super_admin || (currentUser.admin_mode && currentUser.is_approved)
   
-  // Выпадающие списки для темы и шрифта
   var themeOpts = ''
   for (var group in themeGroups) {
     themeOpts += '<optgroup label="' + group + '">'
@@ -334,18 +324,8 @@ function toggleSettings() {
 }
 
 function changeTheme() { var s = document.getElementById('theme-select'); if (s) { currentTheme = s.value; applyTheme(); createParticles() } }
-function changeFont() { 
-  var s = document.getElementById('font-select'); 
-  if (s) { 
-    currentFont = s.value
-    if (fonts[currentFont]) {
-      applyFont()
-    } else {
-      currentFont = 'Press Start 2P'
-      applyFont()
-    }
-  } 
-}
+function changeFont() { var s = document.getElementById('font-select'); if (s) { currentFont = s.value; applyFont() } }
+
 // ====== ВКЛАДКИ ======
 function switchTab(tab) {
   currentTab = tab
@@ -434,7 +414,7 @@ function updateFilter() {
   loadUsers()
 }
 
-// ====== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (новый дизайн) ======
+// ====== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ======
 async function showUserProfile(userId) {
   var user = null
   for (var i = 0; i < users.length; i++) { if (users[i].id === userId) { user = users[i]; break } }
@@ -477,28 +457,6 @@ async function showUserProfile(userId) {
       '<div class="stat-card"><div class="stat-value" style="color:#ffd700">' + (user.pending_salary || 0) + '₽</div><div class="stat-label">Ожидает</div></div>' +
       '<div class="stat-card"><div class="stat-value" style="color:var(--success-text)">' + (user.issued_salary || 0) + '₽</div><div class="stat-label">Выдано</div></div>' +
     '</div>'
-
-    async function updateUserRole(userId) {
-  var sel = document.getElementById('profile-role')
-  if (!sel) return
-  
-  var roleId = sel.value || null
-  await supabase.from('users').update({ role_id: roleId }).eq('id', userId)
-  await recalculateSalary(userId)
-  
-  if (userId === currentUser.id) {
-    var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
-    if (uRes.data) {
-      currentUser.pending_salary = uRes.data.pending_salary
-      currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
-      currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
-      currentUser.role_id = uRes.data.role_id
-      saveSession()
-    }
-  }
-  
-  showUserProfile(userId)
-}
   
   // Контакты
   html += '<div class="table-container"><h3>📞 Контакты</h3>' +
@@ -507,8 +465,8 @@ async function showUserProfile(userId) {
       '<div class="contact-card"><div class="contact-icon">💬</div><div class="contact-label">Discord</div><div class="contact-value">' + (user.discord || 'Не указан') + '</div></div>' +
       '<div class="contact-card"><div class="contact-icon">🌐</div><div class="contact-label">Forum</div><div class="contact-value">' + (user.forum || 'Не указан') + '</div></div>' +
     '</div></div>'
-
-    // Смена должности
+  
+  // Смена должности
   if (user.id !== currentUser.id || currentUser.is_super_admin) {
     var roleOpts = '<option value="">Без должности</option>'
     for (var r = 0; r < allRoles.length; r++) {
@@ -519,25 +477,8 @@ async function showUserProfile(userId) {
     '</div>'
   }
   
-  async function updateUserRole(userId) {
-  var sel = document.getElementById('profile-role')
-  if (!sel) return
-  await supabase.from('users').update({ role_id: sel.value || null }).eq('id', userId)
-  await recalculateSalary(userId)
-  if (userId === currentUser.id) {
-    var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
-    if (uRes.data) {
-      currentUser.pending_salary = uRes.data.pending_salary
-      currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
-      currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
-      saveSession()
-    }
-  }
-  showUserProfile(userId)
-}
-  
   // Кнопки действий
-  if (user.id !== currentUser.id || currentUser.is_super_admin) {
+  if (user.id !== currentUser.id) {
     html += '<div class="profile-actions" style="padding:0 18px;margin-bottom:15px">' +
       '<button onclick="showEditContactsModal(\'' + userId + '\')">✏️ Контакты</button>' +
       '<button onclick="showWarnModal(\'' + userId + '\')">⚠️ Варн</button>' +
@@ -590,7 +531,26 @@ async function showUserProfile(userId) {
   c.innerHTML = html
 }
 
-// ====== РЕДАКТИРОВАНИЕ КОНТАКТОВ ======
+async function updateUserRole(userId) {
+  var sel = document.getElementById('profile-role')
+  if (!sel) return
+  var roleId = sel.value || null
+  await supabase.from('users').update({ role_id: roleId }).eq('id', userId)
+  await recalculateSalary(userId)
+  if (userId === currentUser.id) {
+    var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
+    if (uRes.data) {
+      currentUser.pending_salary = uRes.data.pending_salary
+      currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
+      currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
+      currentUser.role_id = uRes.data.role_id
+      saveSession()
+    }
+  }
+  showUserProfile(userId)
+}
+
+// ====== КОНТАКТЫ ======
 function showEditContactsModal(userId) {
   var user = null
   for (var i = 0; i < users.length; i++) { if (users[i].id === userId) { user = users[i]; break } }
@@ -616,7 +576,7 @@ async function saveContacts(userId) {
   showUserProfile(userId)
 }
 
-// ====== ВАРНЫ, БАНЫ, ПРЕМИИ, ЧАСЫ (без изменений) ======
+// ====== ВАРНЫ ======
 function editWarn(warnId, userId) {
   var m = document.createElement('div'); m.className = 'modal-overlay'
   m.innerHTML = '<div class="modal"><h3>✏️ Варн</h3>' +
@@ -671,6 +631,7 @@ async function deleteBonus(bonusId, userId) {
   showUserProfile(userId)
 }
 
+// ====== МОДАЛКИ ======
 function showWarnModal(userId) {
   var m = document.createElement('div'); m.className = 'modal-overlay'
   m.innerHTML = '<div class="modal"><h3>⚠️ Варн</h3>' +
@@ -1067,50 +1028,6 @@ function renderApp() {
 }
 function navigateTo(p) { currentPage = p; renderApp() }
 
-// Экспорт функций в глобальную область
-window.updateUserRole = updateUserRole
-window.updateFilter = updateFilter
-window.checkCustomMode = checkCustomMode
-window.toggleSettings = toggleSettings
-window.changeTheme = changeTheme
-window.changeFont = changeFont
-window.handleLogin = handleLogin
-window.handleRegister = handleRegister
-window.handleLogout = handleLogout
-window.navigateTo = navigateTo
-window.switchTab = switchTab
-window.showUserProfile = showUserProfile
-window.paySalary = paySalary
-window.showWarnModal = showWarnModal
-window.issueWarn = issueWarn
-window.showBanModal = showBanModal
-window.issueBan = issueBan
-window.showBonusModal = showBonusModal
-window.issueBonus = issueBonus
-window.showEditHoursModal = showEditHoursModal
-window.saveHours = saveHours
-window.approveUser = approveUser
-window.toggleBlockUser = toggleBlockUser
-window.deleteUserAccount = deleteUserAccount
-window.editWarn = editWarn
-window.saveWarn = saveWarn
-window.deleteWarn = deleteWarn
-window.editBonus = editBonus
-window.saveBonus = saveBonus
-window.deleteBonus = deleteBonus
-window.showEditContactsModal = showEditContactsModal
-window.saveContacts = saveContacts
-window.approveUserFromList = approveUserFromList
-window.toggleBlockFromList = toggleBlockFromList
-window.processRequest = processRequest
-window.submitPurchase = submitPurchase
-window.showCreateRole = showCreateRole
-window.createRole = createRole
-window.editRole = editRole
-window.updateRole = updateRole
-window.deleteRole = deleteRole
-
-
 // ====== ЗАПУСК ======
 applyTheme(); applyFont(); createParticles()
 
@@ -1128,6 +1045,7 @@ if (supabase) {
           currentUser.vk_id = r.data.vk_id
           currentUser.discord = r.data.discord
           currentUser.forum = r.data.forum
+          currentUser.role_id = r.data.role_id
           currentUser.role_name = r.data.roles ? r.data.roles.name : null
           currentUser.role_color = r.data.roles ? r.data.roles.color : null
           saveSession()
