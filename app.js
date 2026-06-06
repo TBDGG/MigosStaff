@@ -98,7 +98,7 @@ function clearSession() { localStorage.removeItem('currentUser') }
 function formatDate(d) { if (!d) return '-'; var dt = new Date(d); return dt.toLocaleDateString('ru-RU') + ' ' + dt.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'}) }
 function currentMonth() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth()+1)).slice(-2) }
 
-// ====== РАСЧЁТ ЗАРПЛАТЫ ПРИ ИЗМЕНЕНИИ ЧАСОВ ======
+// ====== РАСЧЁТ ЗАРПЛАТЫ ======
 async function recalculateSalary(userId) {
   var userRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
   if (!userRes.data) return
@@ -109,15 +109,53 @@ async function recalculateSalary(userId) {
   
   if (role && role.salary_value > 0) {
     if (role.salary_type === 'hourly') {
-      // Почасовая: часы * ставка
       newPending = (user.play_hours || 0) * role.salary_value
     } else if (role.salary_type === 'fixed') {
-      // Фиксированная: если есть часы, выдаём фикс
       newPending = (user.play_hours || 0) > 0 ? role.salary_value : 0
     }
   }
   
   await supabase.from('users').update({ pending_salary: newPending }).eq('id', userId)
+}
+
+// ====== ВЫДАЧА ЗАРПЛАТЫ (конец месяца) ======
+async function paySalary(userId) {
+  var userRes = await supabase.from('users').select('*').eq('id', userId).single()
+  if (!userRes.data) return
+  
+  var user = userRes.data
+  var pending = user.pending_salary || 0
+  
+  if (pending <= 0) return
+  
+  // Переносим в баланс и в issued
+  await supabase.from('users').update({
+    balance: (user.balance || 0) + pending,
+    issued_salary: (user.issued_salary || 0) + pending,
+    pending_salary: 0
+  }).eq('id', userId)
+  
+  // Записываем в историю
+  await supabase.from('salary_history').insert({
+    user_id: userId,
+    amount: pending,
+    type: 'salary',
+    month: currentMonth()
+  })
+  
+  // Записываем в monthly_stats
+  var statRes = await supabase.from('monthly_stats').select('*').eq('user_id', userId).eq('month', currentMonth()).single()
+  if (statRes.data) {
+    await supabase.from('monthly_stats').update({ salary: pending }).eq('id', statRes.data.id)
+  } else {
+    await supabase.from('monthly_stats').insert({
+      user_id: userId, month: currentMonth(),
+      play_hours: user.play_hours || 0,
+      salary: pending,
+      warns: user.warns || 0,
+      bonuses: 0
+    })
+  }
 }
 
 // ====== РЕНДЕР ======
@@ -180,7 +218,6 @@ function switchTab(tab) {
   currentTab = tab
   var c = document.getElementById('tab-content')
   if (!c) return
-  
   if (tab === 'users') loadUsers()
   else if (tab === 'roles') loadRoles()
   else if (tab === 'profile') loadProfile()
@@ -208,7 +245,7 @@ async function loadUsers() {
     if (userFilter.role) users = users.filter(function(u) { return u.role_id === userFilter.role })
     if (userFilter.search) { var s = userFilter.search.toLowerCase(); users = users.filter(function(u) { return u.username.toLowerCase().indexOf(s) !== -1 }) }
     if (userFilter.sort === 'play_hours') users.sort(function(a, b) { return (b.play_hours||0) - (a.play_hours||0) })
-    else if (userFilter.sort === 'total_salary') users.sort(function(a, b) { return (b.total_salary||0) - (a.total_salary||0) })
+    else if (userFilter.sort === 'pending_salary') users.sort(function(a, b) { return (b.pending_salary||0) - (a.pending_salary||0) })
     else if (userFilter.sort === 'username') users.sort(function(a, b) { return a.username.localeCompare(b.username) })
     else if (userFilter.sort === 'balance') users.sort(function(a, b) { return (b.balance||0) - (a.balance||0) })
   }
@@ -229,12 +266,12 @@ async function loadUsers() {
       '<select id="user-sort" onchange="updateFilter()" style="max-width:160px;width:auto">' +
         '<option value="priority"' + (userFilter.sort === 'priority' ? ' selected' : '') + '>По приоритету</option>' +
         '<option value="play_hours"' + (userFilter.sort === 'play_hours' ? ' selected' : '') + '>По часам</option>' +
-        '<option value="total_salary"' + (userFilter.sort === 'total_salary' ? ' selected' : '') + '>По зарплате</option>' +
+        '<option value="pending_salary"' + (userFilter.sort === 'pending_salary' ? ' selected' : '') + '>По зарплате</option>' +
         '<option value="balance"' + (userFilter.sort === 'balance' ? ' selected' : '') + '>По балансу</option>' +
         '<option value="username"' + (userFilter.sort === 'username' ? ' selected' : '') + '>По нику</option>' +
       '</select>' +
     '</div>' +
-    '<div style="overflow-x:auto"><table><thead><tr><th>Ник</th><th>Режим</th><th>Должность</th><th>Часы</th><th>Баланс</th><th>Зарплата</th><th>Ожидает</th><th>Варны</th></tr></thead><tbody>'
+    '<div style="overflow-x:auto"><table><thead><tr><th>Ник</th><th>Режим</th><th>Должность</th><th>Часы</th><th>Баланс</th><th>Ожидает</th><th>Выдано</th><th>Варны</th></tr></thead><tbody>'
   
   for (var l = 0; l < users.length; l++) {
     var u = users[l]
@@ -246,8 +283,8 @@ async function loadUsers() {
       '<td style="color:' + nc + '">' + (u.roles ? u.roles.name : (u.position || '-')) + '</td>' +
       '<td>' + (u.play_hours || 0) + 'ч</td>' +
       '<td>' + (u.balance || 0) + '₽</td>' +
-      '<td>' + (u.total_salary || 0) + '₽</td>' +
       '<td style="color:#ffd700">' + (u.pending_salary || 0) + '₽</td>' +
+      '<td style="color:#74d474">' + (u.issued_salary || 0) + '₽</td>' +
       '<td>' + (u.warns || 0) + '</td>' +
     '</tr>'
   }
@@ -299,13 +336,12 @@ async function showUserProfile(userId) {
     '<div class="stats-grid">' +
       '<div class="stat-card"><div class="stat-value">' + (user.play_hours || 0) + 'ч</div><div class="stat-label">Часы</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + (user.balance || 0) + '₽</div><div class="stat-label">Баланс</div></div>' +
-      '<div class="stat-card"><div class="stat-value">' + (user.total_salary || 0) + '₽</div><div class="stat-label">Всего зарплата</div></div>' +
       '<div class="stat-card"><div class="stat-value">' + (user.pending_salary || 0) + '₽</div><div class="stat-label">Ожидает выдачи</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + (user.issued_salary || 0) + '₽</div><div class="stat-label">Всего выдано</div></div>' +
     '</div>' +
     '<div class="table-container"><h3>👤 ' + user.username + '</h3>' +
       '<div class="form-group"><label>Должность</label><select id="profile-role" onchange="updateUserRole(\'' + userId + '\')">' + roleOpts + '</select></div>' +
       '<p style="color:var(--text2);font-size:10px">Режим: <span style="color:var(--accent)">' + (user.mode || '-') + '</span></p>' +
-      '<p style="color:var(--text2);font-size:10px">Выдано зарплаты: <span style="color:var(--accent)">' + (user.issued_salary || 0) + '₽</span></p>' +
       '<p style="color:var(--text2);font-size:10px">Варнов: <span style="color:#d47474">' + (user.warns || 0) + '</span></p>' +
     '</div>'
   
@@ -315,6 +351,7 @@ async function showUserProfile(userId) {
       '<button onclick="showBanModal(\'' + userId + '\')">🔒 Бан</button>' +
       '<button onclick="showBonusModal(\'' + userId + '\')">💰 Премия</button>' +
       '<button onclick="showEditHoursModal(\'' + userId + '\')">⏱ Часы</button>' +
+      '<button onclick="paySalary(\'' + userId + '\')" style="border-color:#74d474;color:#74d474">💳 Выдать зарплату</button>' +
       (!user.is_approved ? '<button onclick="approveUser(\'' + userId + '\')">✅ Одобрить</button>' : '') +
       '<button onclick="toggleBlockUser(\'' + userId + '\', ' + user.is_blocked + ')" class="danger">' + (user.is_blocked ? '🔓 Разблок' : '🔒 Блок') + '</button>' +
       '<button onclick="deleteUserAccount(\'' + userId + '\')" class="danger">🗑 Удалить</button>' +
@@ -366,13 +403,10 @@ async function updateUserRole(userId) {
   var sel = document.getElementById('profile-role')
   if (!sel) return
   await supabase.from('users').update({ role_id: sel.value || null }).eq('id', userId)
-  // Пересчитываем зарплату после смены должности
   await recalculateSalary(userId)
-  // Обновляем currentUser если это он
   if (userId === currentUser.id) {
     var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
     if (uRes.data) {
-      currentUser.total_salary = uRes.data.total_salary
       currentUser.pending_salary = uRes.data.pending_salary
       currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
       currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
@@ -404,7 +438,6 @@ async function saveWarn(warnId, userId) {
 async function deleteWarn(warnId, userId) {
   if (!confirm('Удалить варн?')) return
   await supabase.from('warns').delete().eq('id', warnId)
-  // Обновляем счётчик варнов
   var countRes = await supabase.from('warns').select('id', { count: 'exact' }).eq('user_id', userId).eq('is_active', true)
   await supabase.from('users').update({ warns: countRes.count || 0 }).eq('id', userId)
   showUserProfile(userId)
@@ -457,9 +490,8 @@ async function issueWarn(userId) {
   var u = null
   for (var i = 0; i < users.length; i++) { if (users[i].id === userId) { u = users[i]; break } }
   if (u) {
-    var newWarns = (u.warns || 0) + 1
     await supabase.from('users').update({
-      warns: newWarns,
+      warns: (u.warns || 0) + 1,
       balance: Math.max(0, (u.balance || 0) - fine)
     }).eq('id', userId)
   }
@@ -520,7 +552,6 @@ function showEditHoursModal(userId) {
 async function saveHours(userId) {
   var h = parseInt(document.getElementById('edit-hours-val').value) || 0
   await supabase.from('users').update({ play_hours: h }).eq('id', userId)
-  // Пересчитываем зарплату
   await recalculateSalary(userId)
   document.querySelector('.modal-overlay').remove()
   showUserProfile(userId)
@@ -545,7 +576,6 @@ async function deleteUserAccount(userId) {
 async function loadOsly() {
   var c = document.getElementById('tab-content')
   if (!c) return
-  
   var q = supabase.from('users').select('*, roles(*)').or('is_approved.eq.false,is_blocked.eq.true')
   if (!currentUser.is_super_admin && currentUser.admin_mode) q = q.eq('mode', currentUser.admin_mode)
   var res = await q
@@ -580,27 +610,21 @@ async function toggleBlockFromList(userId, blocked) { await supabase.from('users
 async function loadRequests() {
   var c = document.getElementById('tab-content')
   if (!c) return
-  
   var q = supabase.from('purchase_requests').select('*').order('created_at', { ascending: false })
   if (!currentUser.is_super_admin && currentUser.admin_mode) q = q.eq('mode', currentUser.admin_mode)
   var res = await q
   allRequests = res.data || []
   
   var html = '<div class="table-container"><h3>📋 Заявки на покупки (' + allRequests.length + ')</h3>'
-  
   if (allRequests.length === 0) html += '<p style="color:var(--text2)">Нет заявок</p>'
   else {
     html += '<table><thead><tr><th>Ник</th><th>Режим</th><th>Услуга</th><th>Цена</th><th>Статус</th><th>Дата</th><th>Действия</th></tr></thead><tbody>'
     for (var i = 0; i < allRequests.length; i++) {
       var req = allRequests[i]
-      var statusColor = req.status === 'approved' ? '#74d474' : req.status === 'rejected' ? '#d47474' : '#ffd700'
-      var statusText = req.status === 'approved' ? 'Одобрено' : req.status === 'rejected' ? 'Отклонено' : 'Ожидает'
-      html += '<tr>' +
-        '<td>' + req.username + '</td><td>' + req.mode + '</td><td>' + req.service + '</td><td>' + req.price + '₽</td>' +
-        '<td style="color:' + statusColor + '">' + statusText + '</td><td>' + formatDate(req.created_at) + '</td>' +
-        '<td>' +
-          (req.status === 'pending' ? '<button onclick="processRequest(\'' + req.id + '\',\'approved\')" style="font-size:8px;padding:4px 8px">✅</button> <button onclick="processRequest(\'' + req.id + '\',\'rejected\')" class="danger" style="font-size:8px;padding:4px 8px">❌</button>' : '') +
-        '</td></tr>'
+      var sc = req.status === 'approved' ? '#74d474' : req.status === 'rejected' ? '#d47474' : '#ffd700'
+      var st = req.status === 'approved' ? 'Одобрено' : req.status === 'rejected' ? 'Отклонено' : 'Ожидает'
+      html += '<tr><td>' + req.username + '</td><td>' + req.mode + '</td><td>' + req.service + '</td><td>' + req.price + '₽</td><td style="color:' + sc + '">' + st + '</td><td>' + formatDate(req.created_at) + '</td>' +
+        '<td>' + (req.status === 'pending' ? '<button onclick="processRequest(\'' + req.id + '\',\'approved\')" style="font-size:8px;padding:4px 8px">✅</button> <button onclick="processRequest(\'' + req.id + '\',\'rejected\')" class="danger" style="font-size:8px;padding:4px 8px">❌</button>' : '') + '</td></tr>'
     }
     html += '</tbody></table>'
   }
@@ -612,17 +636,11 @@ async function processRequest(reqId, status) {
   var req = null
   for (var i = 0; i < allRequests.length; i++) { if (allRequests[i].id === reqId) { req = allRequests[i]; break } }
   if (!req) return
-  
   await supabase.from('purchase_requests').update({ status: status, processed_at: new Date().toISOString() }).eq('id', reqId)
-  
   if (status === 'rejected') {
-    // Возвращаем деньги
     var userRes = await supabase.from('users').select('balance').eq('username', req.username).single()
-    if (userRes.data) {
-      await supabase.from('users').update({ balance: (userRes.data.balance || 0) + req.price }).eq('username', req.username)
-    }
+    if (userRes.data) await supabase.from('users').update({ balance: (userRes.data.balance || 0) + req.price }).eq('username', req.username)
   }
-  
   loadRequests()
 }
 
@@ -636,10 +654,9 @@ async function loadBalance() {
   var history = historyRes.data || []
   
   var html = '<div class="stats-grid">' +
-    '<div class="stat-card"><div class="stat-value">' + (currentUser.balance || 0) + '₽</div><div class="stat-label">Текущий баланс</div></div>' +
-    '<div class="stat-card"><div class="stat-value">' + (currentUser.total_salary || 0) + '₽</div><div class="stat-label">Всего зарплата</div></div>' +
-    '<div class="stat-card"><div class="stat-value">' + (currentUser.issued_salary || 0) + '₽</div><div class="stat-label">Уже выдано</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.balance || 0) + '₽</div><div class="stat-label">Баланс</div></div>' +
     '<div class="stat-card"><div class="stat-value">' + (currentUser.pending_salary || 0) + '₽</div><div class="stat-label">Ожидает выдачи</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.issued_salary || 0) + '₽</div><div class="stat-label">Всего выдано</div></div>' +
   '</div>' +
   '<div class="table-container"><h3>🛒 Приобрести услугу</h3>' +
     '<div class="form-group"><label>Ваш ник</label><input id="purchase-nick" value="' + currentUser.username + '" readonly /></div>' +
@@ -650,7 +667,6 @@ async function loadBalance() {
     '<div id="purchase-msg" style="margin-top:10px;font-size:10px"></div>' +
   '</div>' +
   '<div class="table-container"><h3>📋 История заявок (' + history.length + ')</h3>'
-  
   if (history.length === 0) html += '<p style="color:var(--text2);font-size:10px">Нет заявок</p>'
   else {
     html += '<table><thead><tr><th>Услуга</th><th>Цена</th><th>Статус</th><th>Дата</th></tr></thead><tbody>'
@@ -663,7 +679,6 @@ async function loadBalance() {
     html += '</tbody></table>'
   }
   html += '</div>'
-  
   c.innerHTML = html
 }
 
@@ -672,7 +687,6 @@ async function submitPurchase() {
   var price = parseInt(document.getElementById('purchase-price').value) || 0
   var mode = document.getElementById('purchase-mode').value
   var msg = document.getElementById('purchase-msg')
-  
   if (!service || !price) { msg.style.color = '#d47474'; msg.textContent = 'Заполните все поля'; return }
   if (price > (currentUser.balance || 0)) { msg.style.color = '#d47474'; msg.textContent = 'Недостаточно средств'; return }
   
@@ -680,13 +694,11 @@ async function submitPurchase() {
     user_id: currentUser.id, username: currentUser.username,
     mode: mode, service: service, price: price
   })
-  
   await supabase.from('users').update({ balance: (currentUser.balance || 0) - price }).eq('id', currentUser.id)
   currentUser.balance = (currentUser.balance || 0) - price
   saveSession()
-  
   msg.style.color = '#74d474'
-  msg.textContent = '✅ Заявка отправлена! Средства зарезервированы.'
+  msg.textContent = '✅ Заявка отправлена!'
   setTimeout(function() { loadBalance() }, 1500)
 }
 
@@ -694,7 +706,6 @@ async function submitPurchase() {
 async function loadProfile() {
   var c = document.getElementById('tab-content')
   if (!c) return
-  
   var warnsRes = await supabase.from('warns').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false })
   var bonusesRes = await supabase.from('bonuses').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false })
   var statsRes = await supabase.from('monthly_stats').select('*').eq('user_id', currentUser.id).order('month', { ascending: false }).limit(12)
@@ -706,13 +717,12 @@ async function loadProfile() {
   var html = '<div class="stats-grid">' +
     '<div class="stat-card"><div class="stat-value">' + (currentUser.play_hours || 0) + 'ч</div><div class="stat-label">Часы</div></div>' +
     '<div class="stat-card"><div class="stat-value">' + (currentUser.balance || 0) + '₽</div><div class="stat-label">Баланс</div></div>' +
-    '<div class="stat-card"><div class="stat-value">' + (currentUser.total_salary || 0) + '₽</div><div class="stat-label">Всего зарплата</div></div>' +
     '<div class="stat-card"><div class="stat-value">' + (currentUser.pending_salary || 0) + '₽</div><div class="stat-label">Ожидает выдачи</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + (currentUser.issued_salary || 0) + '₽</div><div class="stat-label">Всего выдано</div></div>' +
   '</div>' +
   '<div class="table-container"><h3>👤 ' + currentUser.username + '</h3>' +
     '<p style="color:var(--text2);font-size:10px">Режим: <span style="color:var(--accent)">' + (currentUser.mode || '-') + '</span></p>' +
     '<p style="color:var(--text2);font-size:10px">Должность: <span style="color:' + (currentUser.role_color || 'var(--accent)') + '">' + (currentUser.role_name || currentUser.position || '-') + '</span></p>' +
-    '<p style="color:var(--text2);font-size:10px">Выдано зарплаты: <span style="color:var(--accent)">' + (currentUser.issued_salary || 0) + '₽</span></p>' +
     '<p style="color:var(--text2);font-size:10px">Варнов: <span style="color:#d47474">' + (currentUser.warns || 0) + '</span></p>' +
     '<button onclick="handleLogout()" class="danger" style="margin-top:15px">🚪 Выйти из аккаунта</button>' +
   '</div>' +
@@ -740,7 +750,6 @@ async function loadProfile() {
     html += '</tbody></table>'
   }
   html += '</div>'
-  
   c.innerHTML = html
 }
 
@@ -810,7 +819,7 @@ async function editRole(roleId) {
     '<div class="form-group"><label>Цвет</label><input id="edit-role-color" type="color" value="' + role.color + '" /></div>' +
     '<div class="form-group"><label>Приоритет</label><input id="edit-role-priority" type="number" value="' + role.priority + '" /></div>' +
     '<div class="form-group"><label>Режим</label><select id="edit-role-mode">' + opts + '</select></div>' +
-    '<div class="form-group"><label>Тип зарплаты</label><select id="edit-role-salary-type"><option value="hourly"' + (role.salary_type === 'hourly' ? ' selected' : '') + '>Почасовая (часы × ставка)</option><option value="fixed"' + (role.salary_type === 'fixed' ? ' selected' : '') + '>Фиксированная (если часы > 0)</option></select></div>' +
+    '<div class="form-group"><label>Тип зарплаты</label><select id="edit-role-salary-type"><option value="hourly"' + (role.salary_type === 'hourly' ? ' selected' : '') + '>Почасовая</option><option value="fixed"' + (role.salary_type === 'fixed' ? ' selected' : '') + '>Фиксированная</option></select></div>' +
     '<div class="form-group"><label>Сумма (₽)</label><input id="edit-role-salary-value" type="number" value="' + (role.salary_value||0) + '" /></div>' +
     '<div class="form-group"><label>Штраф за варн (₽)</label><input id="edit-role-warn-fine" type="number" value="' + (role.warn_fine||0) + '" /></div>' +
     '<button onclick="updateRole(\'' + roleId + '\')">💾</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>'
@@ -852,7 +861,7 @@ async function handleLogin() {
         id: u.id, username: u.username, mode: u.mode, position: u.position,
         role_id: u.role_id, is_approved: u.is_approved, is_blocked: u.is_blocked,
         is_super_admin: u.is_super_admin, admin_mode: u.admin_mode,
-        play_hours: u.play_hours, total_salary: u.total_salary, warns: u.warns, notes: u.notes,
+        play_hours: u.play_hours, warns: u.warns, notes: u.notes,
         balance: u.balance, issued_salary: u.issued_salary, pending_salary: u.pending_salary,
         role_name: u.roles ? u.roles.name : null, role_color: u.roles ? u.roles.color : null
       }
@@ -879,7 +888,7 @@ async function handleRegister() {
     var check = await supabase.from('users').select('id').eq('username', uname)
     if (check.data && check.data.length > 0) { if (ee) ee.textContent = 'Ник занят'; return }
     var hash = simpleHash(pwd + uname)
-    var ins = await supabase.from('users').insert({ username: uname, password_hash: hash, mode: mode, balance: 0, total_salary: 0, pending_salary: 0, issued_salary: 0 })
+    var ins = await supabase.from('users').insert({ username: uname, password_hash: hash, mode: mode, balance: 0, pending_salary: 0, issued_salary: 0 })
     if (ins.error) { if (ee) ee.textContent = 'Ошибка: ' + ins.error.message; return }
     if (se) se.textContent = '✅ Успешно! Ожидайте одобрения.'
     setTimeout(function() { currentPage = 'login'; renderApp() }, 2000)
@@ -907,8 +916,6 @@ if (supabase) {
       if (r.data) {
         if (r.data.is_blocked) { clearSession(); currentUser = null }
         else {
-          // Обновляем данные сессии из базы
-          currentUser.total_salary = r.data.total_salary
           currentUser.pending_salary = r.data.pending_salary
           currentUser.issued_salary = r.data.issued_salary
           currentUser.balance = r.data.balance
