@@ -117,6 +117,11 @@ var currentFont = localStorage.getItem('font') || 'Press Start 2P'
 
 function applyTheme() {
   var theme = themes[currentTheme]
+  if (!theme) {
+    currentTheme = 'dark'
+    theme = themes['dark']
+  }
+  
   var root = document.documentElement
   
   root.style.setProperty('--bg', theme.bg)
@@ -329,8 +334,18 @@ function toggleSettings() {
 }
 
 function changeTheme() { var s = document.getElementById('theme-select'); if (s) { currentTheme = s.value; applyTheme(); createParticles() } }
-function changeFont() { var s = document.getElementById('font-select'); if (s) { currentFont = s.value; applyFont() } }
-
+function changeFont() { 
+  var s = document.getElementById('font-select'); 
+  if (s) { 
+    currentFont = s.value
+    if (fonts[currentFont]) {
+      applyFont()
+    } else {
+      currentFont = 'Press Start 2P'
+      applyFont()
+    }
+  } 
+}
 // ====== ВКЛАДКИ ======
 function switchTab(tab) {
   currentTab = tab
