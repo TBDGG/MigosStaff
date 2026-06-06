@@ -485,6 +485,34 @@ async function showUserProfile(userId) {
       '<div class="contact-card"><div class="contact-icon">💬</div><div class="contact-label">Discord</div><div class="contact-value">' + (user.discord || 'Не указан') + '</div></div>' +
       '<div class="contact-card"><div class="contact-icon">🌐</div><div class="contact-label">Forum</div><div class="contact-value">' + (user.forum || 'Не указан') + '</div></div>' +
     '</div></div>'
+
+    // Смена должности
+  if (user.id !== currentUser.id || currentUser.is_super_admin) {
+    var roleOpts = '<option value="">Без должности</option>'
+    for (var r = 0; r < allRoles.length; r++) {
+      roleOpts += '<option value="' + allRoles[r].id + '"' + (user.role_id === allRoles[r].id ? ' selected' : '') + '>' + allRoles[r].name + ' (пр.' + allRoles[r].priority + ')</option>'
+    }
+    html += '<div class="table-container"><h3>🎨 Должность</h3>' +
+      '<div class="form-group"><select id="profile-role" onchange="updateUserRole(\'' + userId + '\')">' + roleOpts + '</select></div>' +
+    '</div>'
+  }
+  
+  async function updateUserRole(userId) {
+  var sel = document.getElementById('profile-role')
+  if (!sel) return
+  await supabase.from('users').update({ role_id: sel.value || null }).eq('id', userId)
+  await recalculateSalary(userId)
+  if (userId === currentUser.id) {
+    var uRes = await supabase.from('users').select('*, roles(*)').eq('id', userId).single()
+    if (uRes.data) {
+      currentUser.pending_salary = uRes.data.pending_salary
+      currentUser.role_name = uRes.data.roles ? uRes.data.roles.name : null
+      currentUser.role_color = uRes.data.roles ? uRes.data.roles.color : null
+      saveSession()
+    }
+  }
+  showUserProfile(userId)
+}
   
   // Кнопки действий
   if (user.id !== currentUser.id || currentUser.is_super_admin) {
