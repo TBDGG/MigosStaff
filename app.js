@@ -1067,6 +1067,50 @@ function renderApp() {
 }
 function navigateTo(p) { currentPage = p; renderApp() }
 
+// Экспорт функций в глобальную область
+window.updateUserRole = updateUserRole
+window.updateFilter = updateFilter
+window.checkCustomMode = checkCustomMode
+window.toggleSettings = toggleSettings
+window.changeTheme = changeTheme
+window.changeFont = changeFont
+window.handleLogin = handleLogin
+window.handleRegister = handleRegister
+window.handleLogout = handleLogout
+window.navigateTo = navigateTo
+window.switchTab = switchTab
+window.showUserProfile = showUserProfile
+window.paySalary = paySalary
+window.showWarnModal = showWarnModal
+window.issueWarn = issueWarn
+window.showBanModal = showBanModal
+window.issueBan = issueBan
+window.showBonusModal = showBonusModal
+window.issueBonus = issueBonus
+window.showEditHoursModal = showEditHoursModal
+window.saveHours = saveHours
+window.approveUser = approveUser
+window.toggleBlockUser = toggleBlockUser
+window.deleteUserAccount = deleteUserAccount
+window.editWarn = editWarn
+window.saveWarn = saveWarn
+window.deleteWarn = deleteWarn
+window.editBonus = editBonus
+window.saveBonus = saveBonus
+window.deleteBonus = deleteBonus
+window.showEditContactsModal = showEditContactsModal
+window.saveContacts = saveContacts
+window.approveUserFromList = approveUserFromList
+window.toggleBlockFromList = toggleBlockFromList
+window.processRequest = processRequest
+window.submitPurchase = submitPurchase
+window.showCreateRole = showCreateRole
+window.createRole = createRole
+window.editRole = editRole
+window.updateRole = updateRole
+window.deleteRole = deleteRole
+
+
 // ====== ЗАПУСК ======
 applyTheme(); applyFont(); createParticles()
 
