@@ -113,22 +113,35 @@ async function showUserProfile(uid){
     h+='</tbody></table></div>'}
   
   // Варны
-  h+='<div class="table-container"><h3>⚠️ Варны ('+uw.length+')</h3>';if(uw.length===0)h+='<p style="color:var(--text2);font-size:var(--font-size-sm)">Нет</p>'
-  else{h+='<table><thead><tr><th>Причина</th><th>Штраф</th><th>Кто</th><th>Дата</th><th>Истекает</th><th></th></tr></thead><tbody>'
-    for(var w=0;w<uw.length;w++)h+='<tr><td>'+uw[w].reason+'</td><td>'+uw[w].fine+'₽</td><td>'+uw[w].created_by+'</td><td>'+formatDate(uw[w].created_at)+'</td><td>'+(uw[w].expires_at?formatDate(uw[w].expires_at):'Навсегда')+'</td><td><button onclick="editWarn(\''+uw[w].id+'\',\''+uid+'\')" style="font-size:var(--font-size-sm);padding:4px 8px">✏️</button> <button onclick="deleteWarn(\''+uw[w].id+'\',\''+uid+'\')" class="danger" style="font-size:var(--font-size-sm);padding:4px 8px">✕</button></td></tr>'}
-  h+='</tbody></table>'}h+='</div>'
+  h+='<div class="table-container"><h3>⚠️ Варны ('+uw.length+')</h3>';
+  if(uw.length===0){h+='<p style="color:var(--text2);font-size:var(--font-size-sm)">Нет</p>'}
+  else{
+    h+='<table><thead><tr><th>Причина</th><th>Штраф</th><th>Кто</th><th>Дата</th><th>Истекает</th><th></th></tr></thead><tbody>';
+    for(var w=0;w<uw.length;w++)h+='<tr><td>'+uw[w].reason+'</td><td>'+uw[w].fine+'₽</td><td>'+uw[w].created_by+'</td><td>'+formatDate(uw[w].created_at)+'</td><td>'+(uw[w].expires_at?formatDate(uw[w].expires_at):'Навсегда')+'</td><td><button onclick="editWarn(\''+uw[w].id+'\',\''+uid+'\')" style="font-size:var(--font-size-sm);padding:4px 8px">✏️</button> <button onclick="deleteWarn(\''+uw[w].id+'\',\''+uid+'\')" class="danger" style="font-size:var(--font-size-sm);padding:4px 8px">✕</button></td></tr>';
+    h+='</tbody></table>';
+  }
+  h+='</div>';
   
   // Премии
-  h+='<div class="table-container"><h3>💰 Премии ('+ub.length+')</h3>';if(ub.length===0)h+='<p style="color:var(--text2)">Нет</p>'
-  else{h+='<table><thead><tr><th>Сумма</th><th>Причина</th><th>Кто</th><th>Дата</th><th></th></tr></thead><tbody>'
-    for(var b=0;b<ub.length;b++)h+='<tr><td style="color:var(--success-text)">+'+ub[b].amount+'₽</td><td>'+ub[b].reason+'</td><td>'+ub[b].created_by+'</td><td>'+formatDate(ub[b].created_at)+'</td><td><button onclick="editBonus(\''+ub[b].id+'\',\''+uid+'\')" style="font-size:var(--font-size-sm);padding:4px 8px">✏️</button> <button onclick="deleteBonus(\''+ub[b].id+'\',\''+uid+'\')" class="danger" style="font-size:var(--font-size-sm);padding:4px 8px">✕</button></td></tr>'}
-  h+='</tbody></table>'}h+='</div>'
+  h+='<div class="table-container"><h3>💰 Премии ('+ub.length+')</h3>';
+  if(ub.length===0){h+='<p style="color:var(--text2)">Нет</p>'}
+  else{
+    h+='<table><thead><tr><th>Сумма</th><th>Причина</th><th>Кто</th><th>Дата</th><th></th></tr></thead><tbody>';
+    for(var b=0;b<ub.length;b++)h+='<tr><td style="color:var(--success-text)">+'+ub[b].amount+'₽</td><td>'+ub[b].reason+'</td><td>'+ub[b].created_by+'</td><td>'+formatDate(ub[b].created_at)+'</td><td><button onclick="editBonus(\''+ub[b].id+'\',\''+uid+'\')" style="font-size:var(--font-size-sm);padding:4px 8px">✏️</button> <button onclick="deleteBonus(\''+ub[b].id+'\',\''+uid+'\')" class="danger" style="font-size:var(--font-size-sm);padding:4px 8px">✕</button></td></tr>';
+    h+='</tbody></table>';
+  }
+  h+='</div>';
   
   // Статистика
-  h+='<div class="table-container"><h3>📊 Статистика</h3>';if(us.length===0)h+='<p style="color:var(--text2)">Нет</p>'
-  else{h+='<table><thead><tr><th>Месяц</th><th>Часы</th><th>Зарплата</th><th>Варны</th><th>Премии</th></tr></thead><tbody>'
-    for(var s=0;s<us.length;s++)h+='<tr><td>'+us[s].month+'</td><td>'+(us[s].play_hours||0)+'ч</td><td>'+(us[s].salary||0)+'₽</td><td>'+(us[s].warns||0)+'</td><td>'+(us[s].bonuses||0)+'₽</td></tr>'}
-  h+='</tbody></table></div>';c.innerHTML=h
+  h+='<div class="table-container"><h3>📊 Статистика</h3>';
+  if(us.length===0){h+='<p style="color:var(--text2)">Нет</p>'}
+  else{
+    h+='<table><thead><tr><th>Месяц</th><th>Часы</th><th>Зарплата</th><th>Варны</th><th>Премии</th></tr></thead><tbody>';
+    for(var s=0;s<us.length;s++)h+='<tr><td>'+us[s].month+'</td><td>'+(us[s].play_hours||0)+'ч</td><td>'+(us[s].salary||0)+'₽</td><td>'+(us[s].warns||0)+'</td><td>'+(us[s].bonuses||0)+'₽</td></tr>';
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+  c.innerHTML=h;
 }
 
 async function updateUserRole(uid){var s=document.getElementById('profile-role');if(!s)return;var rid=s.value||null;await supabase.from('users').update({role_id:rid}).eq('id',uid);await recalcSalary(uid);if(uid===currentUser.id){var r=await supabase.from('users').select('*,roles(*)').eq('id',uid).single();if(r.data){currentUser.pending_salary=r.data.pending_salary;currentUser.role_name=r.data.roles?r.data.roles.name:null;currentUser.role_color=r.data.roles?r.data.roles.color:null;currentUser.role_id=r.data.role_id;saveSession()}}notify('✅','Должность обновлена','success');showUserProfile(uid)}
