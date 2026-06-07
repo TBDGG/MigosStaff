@@ -13,7 +13,8 @@ var cT=localStorage.getItem('theme')||'dark',cF=localStorage.getItem('font')||'P
 function applyTheme(){var t=themes[cT]||themes['dark'];cT=t?cT:'dark';var r=document.documentElement;for(var k in{bg:0,bg2:0,card:0,card2:0,border:0,accent:0,accent2:0,text:0,text2:0,input:0,hover:0,danger:0,dangerHover:0,success:0,successText:0})r.style.setProperty('--'+k,t[k]);localStorage.setItem('theme',cT);document.body.style.background=t.bg;document.body.classList.toggle('plain-theme',!t.isGamer);r.style.setProperty('--particles-display',t.isGamer?'block':'none')}
 function applyFont(){var f=fonts[cF]||fonts['Press Start 2P'];cF=f?cF:'Press Start 2P';var r=document.documentElement,l=document.getElementById('font-link');r.style.setProperty('--font',f.family);r.style.setProperty('--font-size',cF.includes('Press')?'10px':'13px');r.style.setProperty('--font-size-sm',cF.includes('Press')?'8px':'11px');r.style.setProperty('--font-size-lg',cF.includes('Press')?'14px':'18px');if(l)l.href='https://fonts.googleapis.com/css2?family='+f.import+'&display=swap';localStorage.setItem('font',cF)}
 
-var supabase=window.supabaseClient||window.supabase,currentUser=null,currentPage='login',currentTab='users',users=[],roles=[],modes=[],allRequests=[],userFilter={mode:'',sort:'priority',search:'',role:''}
+// ====== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ======
+var supabase=window.supabaseClient||window.supabase,currentUser=null,currentPage='login',currentTab='users',users=[],roles=[],modes=[],allRequests=[],userFilter={mode:'',sort:'priority',search:'',role:''},allTests=[],currentTest=null,currentQuestions=[],userAnswers={}
 
 function createParticles(){var c=document.querySelector('.particles');if(!c)return;c.innerHTML='';var t=themes[cT];if(!t||!t.isGamer)return;var icons=['✦','✧','⛏','⚔','🪓','🔮','⭐','💎','🏹','🛡'];for(var i=0;i<25;i++){var p=document.createElement('span');p.className='particle';p.textContent=icons[Math.floor(Math.random()*icons.length)];p.style.left=Math.random()*100+'%';p.style.fontSize=(Math.random()*14+8)+'px';p.style.animationDuration=(Math.random()*15+10)+'s';p.style.animationDelay=Math.random()*15+'s';p.style.setProperty('--drift',((Math.random()-0.5)*200)+'px');p.style.setProperty('--spin',(Math.random()*360)+'deg');c.appendChild(p)}}
 
@@ -23,8 +24,6 @@ function loadSession(){var s=localStorage.getItem('currentUser');if(s)try{curren
 function clearSession(){localStorage.removeItem('currentUser')}
 function formatDate(d){if(!d)return'-';var dt=new Date(d);return dt.toLocaleDateString('ru-RU')+' '+dt.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function cm(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)}
-
-// ====== УВЕДОМЛЕНИЯ ======
 async function notify(title,msg,type){var n=document.createElement('div');n.style.cssText='position:fixed;top:20px;right:20px;background:var(--card);border:2px solid '+(type==='error'?'#d47474':type==='success'?'var(--success-text)':'var(--accent)')+';border-radius:8px;padding:15px 20px;z-index:9999;min-width:280px;max-width:400px;animation:slideIn 0.3s ease;font-size:var(--font-size-sm);box-shadow:0 4px 20px rgba(0,0,0,0.5)';n.innerHTML='<div style="color:'+(type==='error'?'#d47474':type==='success'?'var(--success-text)':'var(--accent)')+';font-weight:bold;margin-bottom:5px">'+title+'</div><div style="color:var(--text)">'+msg+'</div>';document.body.appendChild(n);setTimeout(function(){n.style.animation='slideOut 0.3s ease';setTimeout(function(){if(n.parentNode)n.parentNode.removeChild(n)},300)},4000)}
 
 // ====== ЗАРПЛАТА ======
@@ -41,7 +40,7 @@ function renderDashboard(){
   var isA=currentUser.is_super_admin||(currentUser.admin_mode&&currentUser.is_approved)
   var tO='';for(var g in tg){tO+='<optgroup label="'+g+'">';for(var t=0;t<tg[g].length;t++){var k=tg[g][t];tO+='<option value="'+k+'"'+(cT===k?' selected':'')+'>'+themes[k].name+'</option>'}tO+='</optgroup>'}
   var fO='';for(var fg2 in fg){fO+='<optgroup label="'+fg2+'">';for(var f=0;f<fg[fg2].length;f++){var fk=fg[fg2][f];fO+='<option value="'+fk+'"'+(cF===fk?' selected':'')+'>'+fonts[fk].name+'</option>'}fO+='</optgroup>'}
-  var h='<div class="nav-bar"><div class="nav-user"><span style="color:'+(currentUser.role_color||'var(--accent)')+'">'+(currentUser.is_super_admin?'👑 ':'')+currentUser.username+'</span><span class="user-mode">'+(currentUser.mode||'Не указан')+'</span><span style="color:var(--text2);font-size:var(--font-size-sm)">💰 '+(currentUser.balance||0)+'₽</span></div><div class="nav-actions"><div class="settings-dropdown"><button onclick="toggleSettings()">⚙️</button><div id="settings-menu" class="settings-menu"><div class="setting-group"><label>Тема</label><select id="theme-select" onchange="changeTheme()">'+tO+'</select></div><div class="setting-group"><label>Шрифт</label><select id="font-select" onchange="changeFont()">'+fO+'</select></div></div></div><button onclick="switchTab(\'profile\')">👤</button>'+(isA?'<button onclick="switchTab(\'users\')">👥</button>':'')+(isA?'<button onclick="switchTab(\'roles\')">🎨</button>':'')+(isA?'<button onclick="switchTab(\'osly\')">🫏</button>':'')+(isA?'<button onclick="switchTab(\'requests\')">📋</button>':'')+'<button onclick="switchTab(\'balance\')">💰</button></div></div><div id="tab-content"></div>'
+  var h='<div class="nav-bar"><div class="nav-user"><span style="color:'+(currentUser.role_color||'var(--accent)')+'">'+(currentUser.is_super_admin?'👑 ':'')+currentUser.username+'</span><span class="user-mode">'+(currentUser.mode||'Не указан')+'</span><span style="color:var(--text2);font-size:var(--font-size-sm)">💰 '+(currentUser.balance||0)+'₽</span></div><div class="nav-actions"><div class="settings-dropdown"><button onclick="toggleSettings()">⚙️</button><div id="settings-menu" class="settings-menu"><div class="setting-group"><label>Тема</label><select id="theme-select" onchange="changeTheme()">'+tO+'</select></div><div class="setting-group"><label>Шрифт</label><select id="font-select" onchange="changeFont()">'+fO+'</select></div></div></div><button onclick="switchTab(\'profile\')">👤</button>'+(isA?'<button onclick="switchTab(\'users\')">👥</button>':'')+(isA?'<button onclick="switchTab(\'roles\')">🎨</button>':'')+(isA?'<button onclick="switchTab(\'osly\')">🫏</button>':'')+(isA?'<button onclick="switchTab(\'requests\')">📋</button>':'')+'<button onclick="switchTab(\'balance\')">💰</button><button onclick="switchTab(\'tests\')">📝</button></div></div><div id="tab-content"></div>'
   setTimeout(function(){if(isA)switchTab('users');else switchTab('profile')},0)
   return h
 }
@@ -49,7 +48,7 @@ function renderDashboard(){
 function toggleSettings(){var m=document.getElementById('settings-menu');if(m)m.classList.toggle('show')}
 function changeTheme(){var s=document.getElementById('theme-select');if(s){cT=s.value;applyTheme();createParticles()}}
 function changeFont(){var s=document.getElementById('font-select');if(s){cF=s.value;applyFont()}}
-function switchTab(t){currentTab=t;var c=document.getElementById('tab-content');if(!c)return;if(t==='users')loadUsers();else if(t==='roles')loadRoles();else if(t==='profile')loadProfile();else if(t==='osly')loadOsly();else if(t==='requests')loadRequests();else if(t==='balance')loadBalance()}
+function switchTab(t){currentTab=t;var c=document.getElementById('tab-content');if(!c)return;if(t==='users')loadUsers();else if(t==='roles')loadRoles();else if(t==='profile')loadProfile();else if(t==='osly')loadOsly();else if(t==='requests')loadRequests();else if(t==='balance')loadBalance();else if(t==='tests')loadTestsTab()}
 
 // ====== ПОЛЬЗОВАТЕЛИ ======
 async function loadUsers(){
@@ -73,9 +72,9 @@ async function loadUsers(){
   var rO='<option value="">Все должности</option>'
   for(var k=0;k<roles.length;k++)rO+='<option value="'+roles[k].id+'"'+(userFilter.role===roles[k].id?' selected':'')+'>'+roles[k].name+'</option>'
   
-  var h='<div class="table-container"><h3>📋 Пользователи ('+users.length+')</h3><div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap"><input id="user-search" placeholder="🔍" value="'+userFilter.search+'" style="max-width:160px" oninput="updateFilter()"/><select id="user-mode-filter" onchange="updateFilter()" style="max-width:150px;width:auto">'+mO+'</select><select id="user-role-filter" onchange="updateFilter()" style="max-width:150px;width:auto">'+rO+'</select><select id="user-sort" onchange="updateFilter()" style="max-width:160px;width:auto"><option value="priority"'+(userFilter.sort==='priority'?' selected':'')+'>Приоритет</option><option value="play_hours"'+(userFilter.sort==='play_hours'?' selected':'')+'>Часы</option><option value="pending_salary"'+(userFilter.sort==='pending_salary'?' selected':'')+'>Зарплата</option><option value="balance"'+(userFilter.sort==='balance'?' selected':'')+'>Баланс</option><option value="username"'+(userFilter.sort==='username'?' selected':'')+'>Ник</option></select></div><div style="overflow-x:auto"><table><thead><tr><th>Ник</th><th>Режим</th><th>Должность</th><th>Часы</th><th>Баланс</th><th>Ожидает</th><th>Выдано</th><th>Варны</th></tr></thead><tbody>'
+  var h='<div class="table-container"><h3>📋 Пользователи ('+users.length+')</h3><div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap"><input id="user-search" placeholder="🔍" value="'+userFilter.search+'" style="max-width:160px" oninput="updateFilter()"/><select id="user-mode-filter" onchange="updateFilter()" style="max-width:150px;width:auto">'+mO+'</select><select id="user-role-filter" onchange="updateFilter()" style="max-width:150px;width:auto">'+rO+'</select><select id="user-sort" onchange="updateFilter()" style="max-width:160px;width:auto"><option value="priority"'+(userFilter.sort==='priority'?' selected':'')+'>Приоритет</option><option value="play_hours"'+(userFilter.sort==='play_hours'?' selected':'')+'>Часы</option><option value="pending_salary"'+(userFilter.sort==='pending_salary'?' selected':'')+'>Зарплата</option><option value="balance"'+(userFilter.sort==='balance'?' selected':'')+'>Баланс</option><option value="username"'+(userFilter.sort==='username'?' selected':'')+'>Ник</option></select></div><div style="overflow-x:auto"><table><thead><tr><th>Ник</th><th>Режим</th><th>Должность</th><th>Часы</th><th>Баланс</th><th>Ожидает</th><th>Выдано</th><th>Варны</th><th>Пред.</th></tr></thead><tbody>'
   for(var l=0;l<users.length;l++){var u=users[l],nc=u.roles?u.roles.color:'var(--accent)';if(u.is_super_admin)nc='#ffd700'
-    h+='<tr><td><a onclick="showUserProfile(\''+u.id+'\')" style="color:'+nc+';cursor:pointer;text-decoration:underline">'+u.username+(u.is_super_admin?' 👑':'')+'</a></td><td>'+(u.mode||'-')+'</td><td style="color:'+nc+'">'+(u.roles?u.roles.name:'-')+'</td><td>'+(u.play_hours||0)+'ч</td><td>'+(u.balance||0)+'₽</td><td style="color:#ffd700">'+(u.pending_salary||0)+'₽</td><td style="color:var(--success-text)">'+(u.issued_salary||0)+'₽</td><td>'+(u.warns||0)+'</td></tr>'}
+    h+='<tr><td><a onclick="showUserProfile(\''+u.id+'\')" style="color:'+nc+';cursor:pointer;text-decoration:underline">'+u.username+(u.is_super_admin?' 👑':'')+'</a></td><td>'+(u.mode||'-')+'</td><td style="color:'+nc+'">'+(u.roles?u.roles.name:'-')+'</td><td>'+(u.play_hours||0)+'ч</td><td>'+(u.balance||0)+'₽</td><td style="color:#ffd700">'+(u.pending_salary||0)+'₽</td><td style="color:var(--success-text)">'+(u.issued_salary||0)+'₽</td><td>'+(u.warns||0)+'</td><td style="color:'+(u.warnings_count>=3?'#ff4444;font-weight:bold':'var(--text2)')+'">'+(u.warnings_count||0)+'</td></tr>'}
   h+='</tbody></table></div></div>';c.innerHTML=h
 }
 function updateFilter(){var s=document.getElementById('user-search'),m=document.getElementById('user-mode-filter'),r=document.getElementById('user-role-filter'),so=document.getElementById('user-sort');if(s)userFilter.search=s.value;if(m)userFilter.mode=m.value;if(r)userFilter.role=r.value;if(so)userFilter.sort=so.value;loadUsers()}
@@ -87,11 +86,12 @@ async function showUserProfile(uid){
   var wr=await supabase.from('warns').select('*').eq('user_id',uid).order('created_at',{ascending:!1})
   var br=await supabase.from('bonuses').select('*').eq('user_id',uid).order('created_at',{ascending:!1})
   var sr=await supabase.from('monthly_stats').select('*').eq('user_id',uid).order('month',{ascending:!1}).limit(12)
+  var tr=await supabase.from('test_results').select('*,tests(title)').eq('user_id',uid).order('completed_at',{ascending:!1})
   var rr=await supabase.from('roles').select('*').order('priority',{ascending:!1})
-  var uw=wr.data||[],ub=br.data||[],us=sr.data||[],ar=rr.data||[]
+  var uw=wr.data||[],ub=br.data||[],us=sr.data||[],ut=tr.data||[],ar=rr.data||[]
   var nc=u.roles?u.roles.color:'var(--accent)';if(u.is_super_admin)nc='#ffd700'
   
-  var h='<button onclick="switchTab(\'users\')" style="margin-bottom:20px">← Назад</button><div class="table-container"><div class="profile-header"><div class="profile-avatar" style="border-color:'+nc+'">'+(u.is_super_admin?'👑':'👤')+'</div><div class="profile-info"><h2 style="color:'+nc+'">'+u.username+(u.is_super_admin?' 👑':'')+'</h2><div class="profile-badges"><span class="badge mode">'+(u.mode||'Без режима')+'</span>'+(u.roles?'<span class="badge role" style="color:'+nc+';border-color:'+nc+'">'+u.roles.name+'</span>':'')+(u.warns>0?'<span class="badge warns">⚠️ '+u.warns+' варнов</span>':'')+'</div></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-value">'+(u.play_hours||0)+'ч</div><div class="stat-label">Часы</div></div><div class="stat-card"><div class="stat-value">'+(u.balance||0)+'₽</div><div class="stat-label">Баланс</div></div><div class="stat-card"><div class="stat-value" style="color:#ffd700">'+(u.pending_salary||0)+'₽</div><div class="stat-label">Ожидает</div></div><div class="stat-card"><div class="stat-value" style="color:var(--success-text)">'+(u.issued_salary||0)+'₽</div><div class="stat-label">Выдано</div></div></div>'
+  var h='<button onclick="switchTab(\'users\')" style="margin-bottom:20px">← Назад</button><div class="table-container"><div class="profile-header"><div class="profile-avatar" style="border-color:'+nc+'">'+(u.is_super_admin?'👑':'👤')+'</div><div class="profile-info"><h2 style="color:'+nc+'">'+u.username+(u.is_super_admin?' 👑':'')+'</h2><div class="profile-badges"><span class="badge mode">'+(u.mode||'Без режима')+'</span>'+(u.roles?'<span class="badge role" style="color:'+nc+';border-color:'+nc+'">'+u.roles.name+'</span>':'')+(u.warns>0?'<span class="badge warns">⚠️ '+u.warns+' варнов</span>':'')+(u.warnings_count>=3?'<span class="badge warns">⚠️ '+u.warnings_count+' пред.</span>':'')+'</div></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-value">'+(u.play_hours||0)+'ч</div><div class="stat-label">Часы</div></div><div class="stat-card"><div class="stat-value">'+(u.balance||0)+'₽</div><div class="stat-label">Баланс</div></div><div class="stat-card"><div class="stat-value" style="color:#ffd700">'+(u.pending_salary||0)+'₽</div><div class="stat-label">Ожидает</div></div><div class="stat-card"><div class="stat-value" style="color:var(--success-text)">'+(u.issued_salary||0)+'₽</div><div class="stat-label">Выдано</div></div></div>'
   
   // Контакты
   h+='<div class="table-container"><h3>📞 Контакты</h3><div class="contacts-grid"><div class="contact-card"><div class="contact-icon">📋</div><div class="contact-label">VK ID</div><div class="contact-value">'+(u.vk_id?'<a href="https://vk.com/'+u.vk_id+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+u.vk_id+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div><div class="contact-card"><div class="contact-icon">💬</div><div class="contact-label">Discord</div><div class="contact-value" style="cursor:pointer;color:var(--text2)" onclick="navigator.clipboard.writeText(\''+(u.discord||'')+'\');notify(\'📋\',\'Скопировано!\',\'success\')">'+(u.discord||'Не указан')+'</div></div><div class="contact-card"><div class="contact-icon">🌐</div><div class="contact-label">Forum</div><div class="contact-value">'+(u.forum?'<a href="'+u.forum+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+u.forum+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div></div></div>'
@@ -105,7 +105,12 @@ async function showUserProfile(uid){
   else if(uid===currentUser.id&&currentUser.admin_notes){h+='<div class="table-container"><h3>📝 Заметки</h3><p style="color:var(--text2);font-size:var(--font-size-sm)">'+currentUser.admin_notes+'</p></div>'}
   
   // Кнопки
-  if(u.id!==currentUser.id){h+='<div class="profile-actions" style="padding:0 18px;margin-bottom:15px"><button onclick="showEditContactsModal(\''+uid+'\')">✏️ Контакты</button><button onclick="showWarnModal(\''+uid+'\')">⚠️ Варн</button><button onclick="showBanModal(\''+uid+'\')">🔒 Бан</button><button onclick="showBonusModal(\''+uid+'\')">💰 Премия</button><button onclick="showEditHoursModal(\''+uid+'\')">⏱ Часы</button><button onclick="paySalary(\''+uid+'\')" class="success">💳 Выдать</button>'+(u.is_blocked?'<button onclick="toggleBlockUser(\''+uid+'\',true)" class="danger">🔓</button>':'')+'<button onclick="deleteUserAccount(\''+uid+'\')" class="danger">🗑</button></div>'}
+  if(u.id!==currentUser.id){h+='<div class="profile-actions" style="padding:0 18px;margin-bottom:15px"><button onclick="showEditContactsModal(\''+uid+'\')">✏️ Контакты</button><button onclick="showWarnModal(\''+uid+'\')">⚠️ Варн</button><button onclick="showBanModal(\''+uid+'\')">🔒 Бан</button><button onclick="showBonusModal(\''+uid+'\')">💰 Премия</button><button onclick="showEditHoursModal(\''+uid+'\')">⏱ Часы</button><button onclick="addWarning(\''+uid+'\')">📝 Пред.</button><button onclick="paySalary(\''+uid+'\')" class="success">💳 Выдать</button>'+(u.is_blocked?'<button onclick="toggleBlockUser(\''+uid+'\',true)" class="danger">🔓</button>':'')+'<button onclick="deleteUserAccount(\''+uid+'\')" class="danger">🗑</button></div>'}
+  
+  // Тесты
+  if(ut.length>0){h+='<div class="table-container"><h3>📝 Тесты ('+ut.length+')</h3><table><thead><tr><th>Тест</th><th>Балл</th><th>Статус</th><th>Дата</th></tr></thead><tbody>'
+    for(var tt=0;tt<ut.length;tt++){var trr=ut[tt];h+='<tr><td>'+(trr.tests?trr.tests.title:'Тест')+'</td><td>'+trr.score+'/'+trr.max_score+'</td><td style="color:'+(trr.is_checked?'var(--success-text)':'#ffd700')+'">'+(trr.is_checked?'Проверено':'Ожидает')+'</td><td>'+formatDate(trr.completed_at)+'</td></tr>'}
+    h+='</tbody></table></div>'}
   
   // Варны
   h+='<div class="table-container"><h3>⚠️ Варны ('+uw.length+')</h3>';if(uw.length===0)h+='<p style="color:var(--text2);font-size:var(--font-size-sm)">Нет</p>'
@@ -128,6 +133,7 @@ async function showUserProfile(uid){
 
 async function updateUserRole(uid){var s=document.getElementById('profile-role');if(!s)return;var rid=s.value||null;await supabase.from('users').update({role_id:rid}).eq('id',uid);await recalcSalary(uid);if(uid===currentUser.id){var r=await supabase.from('users').select('*,roles(*)').eq('id',uid).single();if(r.data){currentUser.pending_salary=r.data.pending_salary;currentUser.role_name=r.data.roles?r.data.roles.name:null;currentUser.role_color=r.data.roles?r.data.roles.color:null;currentUser.role_id=r.data.role_id;saveSession()}}notify('✅','Должность обновлена','success');showUserProfile(uid)}
 async function saveAdminNotes(uid){var n=document.getElementById('admin-notes').value;await supabase.from('users').update({admin_notes:n}).eq('id',uid);notify('✅','Заметки сохранены','success')}
+async function addWarning(uid){var u=null;for(var i=0;i<users.length;i++){if(users[i].id===uid){u=users[i];break}};if(!u)return;await supabase.from('users').update({warnings_count:(u.warnings_count||0)+1}).eq('id',uid);notify('📝','Предупреждение выдано ('+((u.warnings_count||0)+1)+'/3)','info');showUserProfile(uid)}
 
 // ====== КОНТАКТЫ ======
 function showEditContactsModal(uid){var u=null;for(var i=0;i<users.length;i++){if(users[i].id===uid){u=users[i];break}};if(!u)return;var m=document.createElement('div');m.className='modal-overlay';m.innerHTML='<div class="modal"><h3>✏️ Контакты</h3><div class="form-group"><label>VK ID</label><input id="edit-vk" value="'+(u.vk_id||'')+'"/></div><div class="form-group"><label>Discord</label><input id="edit-discord" value="'+(u.discord||'')+'"/></div><div class="form-group"><label>Forum</label><input id="edit-forum" value="'+(u.forum||'')+'"/></div><button onclick="saveContacts(\''+uid+'\')">💾</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>';document.body.appendChild(m)}
@@ -152,7 +158,7 @@ function showEditHoursModal(uid){var u=null;for(var i=0;i<users.length;i++){if(u
 async function saveHours(uid){var h=parseInt(document.getElementById('edit-hours-val').value)||0;await supabase.from('users').update({play_hours:h}).eq('id',uid);await recalcSalary(uid);document.querySelector('.modal-overlay').remove();notify('✅','Часы обновлены','success');showUserProfile(uid)}
 async function approveUser(uid){await supabase.from('users').update({is_approved:!0}).eq('id',uid);notify('✅','Одобрен','success');showUserProfile(uid)}
 async function toggleBlockUser(uid,b){await supabase.from('users').update({is_blocked:!b}).eq('id',uid);notify(b?'🔓':'🔒',b?'Разблокирован':'Заблокирован',b?'success':'error');showUserProfile(uid)}
-async function deleteUserAccount(uid){if(!confirm('Удалить?'))return;await supabase.from('warns').delete().eq('user_id',uid);await supabase.from('bans').delete().eq('user_id',uid);await supabase.from('bonuses').delete().eq('user_id',uid);await supabase.from('purchase_requests').delete().eq('user_id',uid);await supabase.from('salary_history').delete().eq('user_id',uid);await supabase.from('monthly_stats').delete().eq('user_id',uid);await supabase.from('users').delete().eq('id',uid);if(uid===currentUser.id)handleLogout();else switchTab('users');notify('🗑','Пользователь удалён','info')}
+async function deleteUserAccount(uid){if(!confirm('Удалить?'))return;await supabase.from('warns').delete().eq('user_id',uid);await supabase.from('bans').delete().eq('user_id',uid);await supabase.from('bonuses').delete().eq('user_id',uid);await supabase.from('purchase_requests').delete().eq('user_id',uid);await supabase.from('salary_history').delete().eq('user_id',uid);await supabase.from('monthly_stats').delete().eq('user_id',uid);await supabase.from('test_results').delete().eq('user_id',uid);await supabase.from('users').delete().eq('id',uid);if(uid===currentUser.id)handleLogout();else switchTab('users');notify('🗑','Пользователь удалён','info')}
 
 // ====== ОСЛЫ ======
 async function loadOsly(){var c=document.getElementById('tab-content');if(!c)return;var q=supabase.from('users').select('*').or('is_approved.eq.false,is_blocked.eq.true');if(!currentUser.is_super_admin&&currentUser.admin_mode)q=q.eq('mode',currentUser.admin_mode);var r=await q,os=r.data||[],h='<div class="table-container"><h3>🫏 Ослы ('+os.length+')</h3>';if(os.length===0)h+='<p style="color:var(--text2)">Все одобрены!</p>';else{h+='<table><thead><tr><th>Ник</th><th>Режим</th><th>Статус</th><th></th></tr></thead><tbody>';for(var i=0;i<os.length;i++){var o=os[i],st=o.is_blocked?'<span class="status-blocked">Заблок</span>':'<span class="status-pending">Не одобрен</span>';h+='<tr><td>'+o.username+'</td><td>'+(o.mode||'-')+'</td><td>'+st+'</td><td>'+(!o.is_approved?'<button onclick="approveUserFromList(\''+o.id+'\')" style="font-size:var(--font-size-sm)">✅</button> ':'')+'<button onclick="toggleBlockFromList(\''+o.id+'\','+o.is_blocked+')" class="danger" style="font-size:var(--font-size-sm)">'+(o.is_blocked?'🔓':'🔒')+'</button></td></tr>'}h+='</tbody></table>'}h+='</div>';c.innerHTML=h}
@@ -167,13 +173,272 @@ async function processRequest(rid,st){var req=null;for(var i=0;i<allRequests.len
 async function loadBalance(){var c=document.getElementById('tab-content');if(!c)return;var hr=await supabase.from('purchase_requests').select('*').eq('username',currentUser.username).order('created_at',{ascending:!1}),hst=hr.data||[],h='<div class="stats-grid"><div class="stat-card"><div class="stat-value">'+(currentUser.balance||0)+'₽</div><div class="stat-label">Баланс</div></div><div class="stat-card"><div class="stat-value" style="color:#ffd700">'+(currentUser.pending_salary||0)+'₽</div><div class="stat-label">Ожидает</div></div><div class="stat-card"><div class="stat-value" style="color:var(--success-text)">'+(currentUser.issued_salary||0)+'₽</div><div class="stat-label">Выдано</div></div></div><div class="table-container"><h3>🛒 Услуга</h3><div class="form-group"><label>Ник</label><input id="purchase-nick" value="'+currentUser.username+'" readonly/></div><div class="form-group"><label>Режим</label><select id="purchase-mode"><option>Выживание</option><option>Гриферский</option><option>РП-Школа</option><option>Анархия-PE</option></select></div><div class="form-group"><label>Услуга</label><input id="purchase-service"/></div><div class="form-group"><label>Цена</label><input id="purchase-price" type="number"/></div><button onclick="submitPurchase()">📤</button><div id="purchase-msg" style="margin-top:10px;font-size:var(--font-size-sm)"></div></div><div class="table-container"><h3>📋 История ('+hst.length+')</h3>';if(hst.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Услуга</th><th>Цена</th><th>Статус</th><th>Дата</th></tr></thead><tbody>';for(var i=0;i<hst.length;i++){var hi=hst[i],sc=hi.status==='approved'?'var(--success-text)':hi.status==='rejected'?'#d47474':'#ffd700';h+='<tr><td>'+hi.service+'</td><td>'+hi.price+'₽</td><td style="color:'+sc+'">'+(hi.status==='approved'?'Одобрено':hi.status==='rejected'?'Отклонено':'Ожидает')+'</td><td>'+formatDate(hi.created_at)+'</td></tr>'}h+='</tbody></table>'}h+='</div>';c.innerHTML=h}
 async function submitPurchase(){var s=document.getElementById('purchase-service').value,p=parseInt(document.getElementById('purchase-price').value)||0,m=document.getElementById('purchase-mode').value,msg=document.getElementById('purchase-msg');if(!s||!p){msg.style.color='#d47474';msg.textContent='Заполните поля';return}if(p>(currentUser.balance||0)){msg.style.color='#d47474';msg.textContent='Недостаточно средств';return};await supabase.from('purchase_requests').insert({user_id:currentUser.id,username:currentUser.username,mode:m,service:s,price:p});await supabase.from('users').update({balance:(currentUser.balance||0)-p}).eq('id',currentUser.id);currentUser.balance-=p;saveSession();msg.style.color='var(--success-text)';msg.textContent='✅ Отправлено!';setTimeout(function(){loadBalance()},1500)}
 
+// ====== ТЕСТЫ ======
+async function loadTestsTab(){
+  var c=document.getElementById('tab-content');if(!c)return
+  c.innerHTML='<div style="text-align:center;padding:20px;color:var(--text2)">Загрузка...</div>'
+  var isA=currentUser.is_super_admin||(currentUser.admin_mode&&currentUser.is_approved)
+  var h='<div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap"><button onclick="loadAvailableTests()"'+(currentTab==='tests-available'?' class="active"':'')+'>📝 Доступные</button><button onclick="loadMyResults()">📊 Мои результаты</button>'+(isA?'<button onclick="loadManageTests()">⚙️ Управление</button><button onclick="loadCheckTests()">✅ Проверка</button>':'')+'</div><div id="tests-content"></div>'
+  c.innerHTML=h;loadAvailableTests()
+}
+
+async function loadAvailableTests(){
+  var tc=document.getElementById('tests-content');if(!tc)return;currentTab='tests-available'
+  var r=await supabase.from('tests').select('*').eq('is_active',!0).order('created_at',{ascending:!1});allTests=r.data||[]
+  var cr=await supabase.from('test_results').select('test_id,score,max_score,is_checked').eq('user_id',currentUser.id)
+  var comp={};if(cr.data)for(var i=0;i<cr.data.length;i++)comp[cr.data[i].test_id]=cr.data[i]
+  
+  var h='<h3>📝 Доступные тесты ('+allTests.length+')</h3>'
+  if(allTests.length===0)h+='<p style="color:var(--text2)">Нет</p>'
+  else{h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px">'
+    for(var i=0;i<allTests.length;i++){var t=allTests[i],c=comp[t.id]
+      h+='<div class="stat-card" style="text-align:left"><div style="color:var(--accent);font-size:var(--font-size);margin-bottom:8px">'+t.title+'</div><div style="color:var(--text2);font-size:var(--font-size-sm);margin-bottom:8px">'+(t.description||'')+'</div><div style="color:var(--text2);font-size:var(--font-size-sm)">Макс: '+t.max_score+' баллов</div>'+(c?'<div style="margin-top:8px;color:'+(c.is_checked?'var(--success-text)':'#ffd700')+';font-size:var(--font-size-sm)">'+(c.is_checked?'✅ '+c.score+'/'+c.max_score:'⏳ Пройден')+'</div>':'<button onclick="startTest(\''+t.id+'\')" style="margin-top:8px;width:100%">▶ Начать</button>')+'</div>'}
+    h+='</div>'}tc.innerHTML=h
+}
+
+async function startTest(tid){
+  var t=null;for(var i=0;i<allTests.length;i++){if(allTests[i].id===tid){t=allTests[i];break}};if(!t)return
+  var qr=await supabase.from('test_questions').select('*').eq('test_id',tid).order('order_index',{ascending:!0})
+  currentTest=t;currentQuestions=qr.data||[];userAnswers={}
+  
+  var tc=document.getElementById('tests-content');if(!tc)return
+  var h='<button onclick="loadAvailableTests()" style="margin-bottom:15px">← Назад</button><h3>📝 '+t.title+'</h3><div style="color:var(--text2);margin-bottom:15px">Вопросов: '+currentQuestions.length+' | Макс. балл: '+t.max_score+'</div>'
+  
+  for(var i=0;i<currentQuestions.length;i++){
+    var q=currentQuestions[i];h+='<div class="table-container" style="margin-bottom:10px"><div style="color:var(--accent);margin-bottom:10px"><b>Вопрос '+(i+1)+'</b> ('+q.score+' баллов)</div><div style="color:var(--text);margin-bottom:10px">'+q.question_text+'</div>'
+    
+    if(q.question_type==='test'){
+      var opts=JSON.parse(q.options||'[]')
+      for(var j=0;j<opts.length;j++)h+='<label style="display:block;margin-bottom:5px;cursor:pointer"><input type="radio" name="q_'+i+'" value="'+opts[j]+'" onchange="userAnswers[\''+q.id+'\']=this.value" style="width:auto;margin-right:8px"/>'+opts[j]+'</label>'
+    }else if(q.question_type==='text'){
+      h+='<textarea id="ta_'+q.id+'" oninput="userAnswers[\''+q.id+'\']=this.value" style="width:100%;height:80px;background:var(--input);border:2px solid var(--border);color:var(--text);font-family:var(--font);padding:10px;border-radius:var(--border-radius)" placeholder="Ваш ответ..."></textarea>'
+    }else if(q.question_type==='order'){
+      var ord=JSON.parse(q.options||'[]'),shuffled=ord.slice().sort(function(){return Math.random()-0.5})
+      h+='<div style="color:var(--text2);margin-bottom:8px">Расставьте в правильном порядке (перетаскивайте):</div><div id="order_'+i+'" style="display:flex;flex-direction:column;gap:5px">'
+      for(var k=0;k<shuffled.length;k++)h+='<div class="order-item" draggable="true" style="background:var(--input);border:1px solid var(--border);padding:8px;border-radius:4px;cursor:move" data-value="'+shuffled[k]+'">'+shuffled[k]+'</div>'
+      h+='</div>'
+      setTimeout(function(){initDragDrop(i,q.id)},100)
+    }
+    h+='</div>'
+  }
+  h+='<button onclick="submitTest(\''+tid+'\')" style="width:100%;margin-top:10px">📤 Завершить тест</button>'
+  tc.innerHTML=h
+}
+
+function initDragDrop(idx,qid){
+  var container=document.getElementById('order_'+idx)
+  if(!container)return
+  var items=container.querySelectorAll('.order-item')
+  items.forEach(function(item){
+    item.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',e.target.dataset.value);e.target.style.opacity='0.5'})
+    item.addEventListener('dragend',function(e){e.target.style.opacity='1'})
+    item.addEventListener('dragover',function(e){e.preventDefault()})
+    item.addEventListener('drop',function(e){e.preventDefault();var dragged=document.querySelector('.order-item[data-value="'+e.dataTransfer.getData('text/plain')+'"]');if(dragged&&dragged!==e.target){var parent=e.target.parentNode;parent.insertBefore(dragged,e.target.nextSibling===dragged?e.target:e.target);saveOrder(idx,qid)}})
+  })
+}
+
+function saveOrder(idx,qid){
+  var items=document.getElementById('order_'+idx).querySelectorAll('.order-item'),order=[]
+  for(var i=0;i<items.length;i++)order.push(items[i].dataset.value)
+  userAnswers[qid]=JSON.stringify(order)
+}
+
+async function submitTest(tid){
+  var answers={}
+  for(var k in userAnswers)answers[k]=userAnswers[k]
+  
+  var maxScore=0;for(var i=0;i<currentQuestions.length;i++)maxScore+=currentQuestions[i].score
+  
+  await supabase.from('test_results').insert({
+    test_id:tid,user_id:currentUser.id,username:currentUser.username,
+    answers:answers,score:0,max_score:maxScore,is_checked:!1
+  })
+  
+  notify('✅','Тест отправлен на проверку!','success')
+  loadAvailableTests()
+}
+
+async function loadMyResults(){
+  var tc=document.getElementById('tests-content');if(!tc)return;currentTab='tests-results'
+  var r=await supabase.from('test_results').select('*,tests(title)').eq('user_id',currentUser.id).order('completed_at',{ascending:!1})
+  var results=r.data||[]
+  var h='<h3>📊 Мои результаты ('+results.length+')</h3>'
+  if(results.length===0)h+='<p style="color:var(--text2)">Нет пройденных тестов</p>'
+  else{h+='<table><thead><tr><th>Тест</th><th>Балл</th><th>Статус</th><th>Дата</th></tr></thead><tbody>'
+    for(var i=0;i<results.length;i++){var res=results[i];h+='<tr><td>'+(res.tests?res.tests.title:'Тест')+'</td><td>'+res.score+'/'+res.max_score+'</td><td style="color:'+(res.is_checked?'var(--success-text)':'#ffd700')+'">'+(res.is_checked?'✅ Проверено':'⏳ Ожидает')+'</td><td>'+formatDate(res.completed_at)+'</td></tr>'}
+    h+='</tbody></table>'}tc.innerHTML=h
+}
+
+async function loadManageTests(){
+  var tc=document.getElementById('tests-content');if(!tc)return;currentTab='tests-manage'
+  var r=await supabase.from('tests').select('*').order('created_at',{ascending:!1})
+  var tests=r.data||[]
+  var h='<h3>⚙️ Управление тестами</h3><button onclick="showCreateTest()" style="margin-bottom:15px">+ Создать тест</button>'
+  if(tests.length===0)h+='<p style="color:var(--text2)">Нет тестов</p>'
+  else{h+='<table><thead><tr><th>Название</th><th>Режим</th><th>Баллы</th><th>Вопросы</th><th>Активен</th><th></th></tr></thead><tbody>'
+    for(var i=0;i<tests.length;i++){var t=tests[i]
+      h+='<tr><td>'+t.title+'</td><td>'+t.mode+'</td><td>'+t.max_score+'</td><td><button onclick="manageQuestions(\''+t.id+'\')">📝</button></td><td>'+(t.is_active?'✅':'❌')+'</td><td><button onclick="editTest(\''+t.id+'\')">✏️</button> <button onclick="deleteTest(\''+t.id+'\')" class="danger">🗑</button></td></tr>'}
+    h+='</tbody></table>'}tc.innerHTML=h
+}
+
+function showCreateTest(){
+  var m=document.createElement('div');m.className='modal-overlay'
+  m.innerHTML='<div class="modal"><h3>📝 Новый тест</h3><div class="form-group"><label>Название</label><input id="test-title"/></div><div class="form-group"><label>Описание</label><textarea id="test-desc" style="height:60px"></textarea></div><div class="form-group"><label>Режим</label><select id="test-mode"><option>Выживание</option><option>Гриферский</option><option>РП-Школа</option><option>Анархия</option><option>SKYPVP</option></select></div><div class="form-group"><label>Макс. балл</label><input id="test-max-score" type="number" value="100"/></div><button onclick="createTest()">Создать</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>'
+  document.body.appendChild(m)
+}
+
+async function createTest(){
+  var title=document.getElementById('test-title').value;if(!title)return alert('Введите название')
+  await supabase.from('tests').insert({title:title,description:document.getElementById('test-desc').value,mode:document.getElementById('test-mode').value,max_score:parseInt(document.getElementById('test-max-score').value)||100,created_by:currentUser.username})
+  document.querySelector('.modal-overlay').remove();notify('✅','Тест создан','success');loadManageTests()
+}
+
+async function editTest(tid){
+  var t=null;var r=await supabase.from('tests').select('*').eq('id',tid).single();if(r.data)t=r.data;if(!t)return
+  var modes=['Выживание','Гриферский','РП-Школа','Анархия','SKYPVP'],opts=''
+  for(var i=0;i<modes.length;i++)opts+='<option value="'+modes[i]+'"'+(t.mode===modes[i]?' selected':'')+'>'+modes[i]+'</option>'
+  var m=document.createElement('div');m.className='modal-overlay'
+  m.innerHTML='<div class="modal"><h3>✏️ Тест</h3><div class="form-group"><label>Название</label><input id="edit-test-title" value="'+t.title+'"/></div><div class="form-group"><label>Описание</label><textarea id="edit-test-desc" style="height:60px">'+(t.description||'')+'</textarea></div><div class="form-group"><label>Режим</label><select id="edit-test-mode">'+opts+'</select></div><div class="form-group"><label>Макс. балл</label><input id="edit-test-max" type="number" value="'+t.max_score+'"/></div><div class="form-group"><label><input type="checkbox" id="edit-test-active"'+(t.is_active?' checked':'')+'/> Активен</label></div><button onclick="updateTest(\''+tid+'\')">💾</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>'
+  document.body.appendChild(m)
+}
+
+async function updateTest(tid){await supabase.from('tests').update({title:document.getElementById('edit-test-title').value,description:document.getElementById('edit-test-desc').value,mode:document.getElementById('edit-test-mode').value,max_score:parseInt(document.getElementById('edit-test-max').value)||100,is_active:document.getElementById('edit-test-active').checked}).eq('id',tid);document.querySelector('.modal-overlay').remove();notify('✅','Тест обновлён','success');loadManageTests()}
+async function deleteTest(tid){if(!confirm('Удалить тест и все вопросы?'))return;await supabase.from('test_questions').delete().eq('test_id',tid);await supabase.from('test_results').delete().eq('test_id',tid);await supabase.from('tests').delete().eq('id',tid);notify('🗑','Тест удалён','info');loadManageTests()}
+
+async function manageQuestions(tid){
+  var tc=document.getElementById('tests-content');if(!tc)return;currentTab='tests-questions'
+  var tr=await supabase.from('tests').select('*').eq('id',tid).single();var t=tr.data;if(!t)return
+  var qr=await supabase.from('test_questions').select('*').eq('test_id',tid).order('order_index',{ascending:!0})
+  var questions=qr.data||[]
+  var h='<button onclick="loadManageTests()" style="margin-bottom:15px">← Назад</button><h3>📝 '+t.title+'</h3><button onclick="showCreateQuestion(\''+tid+'\')" style="margin-bottom:15px">+ Добавить вопрос</button>'
+  if(questions.length===0)h+='<p style="color:var(--text2)">Нет вопросов</p>'
+  else{for(var i=0;i<questions.length;i++){var q=questions[i],typeText=q.question_type==='test'?'Тест':q.question_type==='text'?'Текст':'Порядок'
+    h+='<div class="table-container" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>#'+(i+1)+'</b> '+typeText+' | '+q.score+' баллов</div><div><button onclick="editQuestion(\''+q.id+'\')" style="font-size:var(--font-size-sm)">✏️</button> <button onclick="deleteQuestion(\''+q.id+'\',\''+tid+'\')" class="danger" style="font-size:var(--font-size-sm)">🗑</button></div></div><div style="color:var(--text2);font-size:var(--font-size-sm);margin-top:5px">'+q.question_text.substring(0,100)+'</div></div>'}}
+  tc.innerHTML=h
+}
+
+function showCreateQuestion(tid){
+  var m=document.createElement('div');m.className='modal-overlay'
+  m.innerHTML='<div class="modal" style="max-width:600px"><h3>➕ Новый вопрос</h3><div class="form-group"><label>Тип</label><select id="q-type" onchange="toggleQuestionType()"><option value="test">Тест (варианты)</option><option value="text">Текст (свой ответ)</option><option value="order">Порядок</option></select></div><div class="form-group"><label>Текст вопроса</label><textarea id="q-text" style="height:80px"></textarea></div><div class="form-group"><label>Баллы</label><input id="q-score" type="number" value="10"/></div><div id="q-options-container"><div class="form-group"><label>Варианты (по одному на строку)</label><textarea id="q-options" style="height:80px" placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea></div><div class="form-group"><label>Правильный ответ</label><input id="q-correct"/></div></div><div id="q-order-container" style="display:none"><div class="form-group"><label>Правильный порядок (по одному на строку)</label><textarea id="q-order" style="height:80px" placeholder="Шаг 1&#10;Шаг 2&#10;Шаг 3"></textarea></div></div><button onclick="createQuestion(\''+tid+'\')">Добавить</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>'
+  document.body.appendChild(m)
+}
+
+function toggleQuestionType(){
+  var type=document.getElementById('q-type').value
+  document.getElementById('q-options-container').style.display=type==='text'?'none':'block'
+  document.getElementById('q-order-container').style.display=type==='order'?'block':'none'
+}
+
+async function createQuestion(tid){
+  var type=document.getElementById('q-type').value,text=document.getElementById('q-text').value
+  var score=parseInt(document.getElementById('q-score').value)||10
+  if(!text)return alert('Введите текст вопроса')
+  
+  var data={test_id:tid,question_text:text,question_type:type,score:score,order_index:999}
+  
+  if(type==='test'){
+    var opts=document.getElementById('q-options').value.split('\n').filter(function(x){return x.trim()})
+    data.options=JSON.stringify(opts);data.correct_answer=document.getElementById('q-correct').value
+  }else if(type==='order'){
+    var ord=document.getElementById('q-order').value.split('\n').filter(function(x){return x.trim()})
+    data.options=JSON.stringify(ord);data.correct_order=JSON.stringify(ord)
+  }else{data.correct_answer=''}
+  
+  // Получаем следующий индекс
+  var cr=await supabase.from('test_questions').select('id',{count:'exact'}).eq('test_id',tid)
+  data.order_index=(cr.count||0)+1
+  
+  await supabase.from('test_questions').insert(data)
+  document.querySelector('.modal-overlay').remove();notify('✅','Вопрос добавлен','success');manageQuestions(tid)
+}
+
+async function editQuestion(qid){
+  var qr=await supabase.from('test_questions').select('*').eq('id',qid).single();var q=qr.data;if(!q)return
+  var m=document.createElement('div');m.className='modal-overlay'
+  m.innerHTML='<div class="modal" style="max-width:600px"><h3>✏️ Вопрос</h3><div class="form-group"><label>Тип</label><select id="eq-type" onchange="toggleEditQuestionType()"><option value="test"'+(q.question_type==='test'?' selected':'')+'>Тест</option><option value="text"'+(q.question_type==='text'?' selected':'')+'>Текст</option><option value="order"'+(q.question_type==='order'?' selected':'')+'>Порядок</option></select></div><div class="form-group"><label>Текст</label><textarea id="eq-text" style="height:80px">'+q.question_text+'</textarea></div><div class="form-group"><label>Баллы</label><input id="eq-score" type="number" value="'+q.score+'"/></div><div id="eq-options-container"><div class="form-group"><label>Варианты</label><textarea id="eq-options" style="height:80px">'+(JSON.parse(q.options||'[]')).join('\n')+'</textarea></div><div class="form-group"><label>Правильный ответ</label><input id="eq-correct" value="'+(q.correct_answer||'')+'"/></div></div><div id="eq-order-container" style="display:'+(q.question_type==='order'?'block':'none')+'"><div class="form-group"><label>Правильный порядок</label><textarea id="eq-order" style="height:80px">'+(JSON.parse(q.options||'[]')).join('\n')+'</textarea></div></div><button onclick="updateQuestion(\''+qid+'\',\''+q.test_id+'\')">💾</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>'
+  document.body.appendChild(m)
+}
+
+function toggleEditQuestionType(){
+  var type=document.getElementById('eq-type').value
+  document.getElementById('eq-options-container').style.display=type==='text'?'none':'block'
+  document.getElementById('eq-order-container').style.display=type==='order'?'block':'none'
+}
+
+async function updateQuestion(qid,tid){
+  var type=document.getElementById('eq-type').value,text=document.getElementById('eq-text').value
+  var score=parseInt(document.getElementById('eq-score').value)||10,data={question_text:text,question_type:type,score:score}
+  if(type==='test'){data.options=JSON.stringify(document.getElementById('eq-options').value.split('\n').filter(function(x){return x.trim()}));data.correct_answer=document.getElementById('eq-correct').value}
+  else if(type==='order'){var ord=document.getElementById('eq-order').value.split('\n').filter(function(x){return x.trim()});data.options=JSON.stringify(ord);data.correct_order=JSON.stringify(ord)}
+  else data.correct_answer=''
+  await supabase.from('test_questions').update(data).eq('id',qid)
+  document.querySelector('.modal-overlay').remove();notify('✅','Вопрос обновлён','success');manageQuestions(tid)
+}
+
+async function deleteQuestion(qid,tid){if(!confirm('Удалить?'))return;await supabase.from('test_questions').delete().eq('id',qid);notify('🗑','Вопрос удалён','info');manageQuestions(tid)}
+
+async function loadCheckTests(){
+  var tc=document.getElementById('tests-content');if(!tc)return;currentTab='tests-check'
+  var r=await supabase.from('test_results').select('*,tests(title)').eq('is_checked',!1).order('completed_at',{ascending:!1})
+  var results=r.data||[]
+  var h='<h3>✅ Проверка тестов ('+results.length+')</h3>'
+  if(results.length===0)h+='<p style="color:var(--text2)">Нет тестов на проверку</p>'
+  else{h+='<table><thead><tr><th>Пользователь</th><th>Тест</th><th>Дата</th><th></th></tr></thead><tbody>'
+    for(var i=0;i<results.length;i++){var res=results[i];h+='<tr><td>'+res.username+'</td><td>'+(res.tests?res.tests.title:'Тест')+'</td><td>'+formatDate(res.completed_at)+'</td><td><button onclick="checkTest(\''+res.id+'\')">🔍 Проверить</button></td></tr>'}
+    h+='</tbody></table>'}tc.innerHTML=h
+}
+
+async function checkTest(rid){
+  var rr=await supabase.from('test_results').select('*,tests(*)').eq('id',rid).single();var res=rr.data;if(!res)return
+  var qr=await supabase.from('test_questions').select('*').eq('test_id',res.test_id).order('order_index',{ascending:!0})
+  var questions=qr.data||[],answers=res.answers||{}
+  var tc=document.getElementById('tests-content');if(!tc)return
+  
+  var h='<button onclick="loadCheckTests()" style="margin-bottom:15px">← Назад</button><h3>🔍 Проверка: '+res.username+' — '+(res.tests?res.tests.title:'')+'</h3><div style="color:var(--text2);margin-bottom:15px">Макс. балл: '+res.max_score+'</div>'
+  
+  for(var i=0;i<questions.length;i++){
+    var q=questions[i],ans=answers[q.id]||''
+    h+='<div class="table-container" style="margin-bottom:10px"><div style="color:var(--accent);margin-bottom:5px"><b>Вопрос '+(i+1)+'</b> ('+q.score+' баллов)</div><div style="color:var(--text);margin-bottom:8px">'+q.question_text+'</div>'
+    
+    if(q.question_type==='test'){
+      h+='<div style="color:var(--text2)">Ответ: <span style="color:var(--text)">'+ans+'</span></div><div style="color:var(--success-text)">Правильно: '+q.correct_answer+'</div>'
+    }else if(q.question_type==='text'){
+      h+='<div style="color:var(--text2)">Ответ:</div><div style="color:var(--text);background:var(--input);padding:10px;border-radius:4px;margin-top:5px">'+ans+'</div>'
+    }else if(q.question_type==='order'){
+      var userOrder=[];try{userOrder=JSON.parse(ans)}catch(e){userOrder=[]}
+      var correctOrder=JSON.parse(q.correct_order||'[]')
+      h+='<div style="display:flex;gap:20px"><div><div style="color:var(--text2);margin-bottom:5px">Ответ:</div>'+userOrder.map(function(x){return'<div style="background:var(--input);padding:5px 10px;margin:2px 0;border-radius:4px">'+x+'</div>'}).join('')+'</div><div><div style="color:var(--success-text);margin-bottom:5px">Правильно:</div>'+correctOrder.map(function(x){return'<div style="background:var(--success);padding:5px 10px;margin:2px 0;border-radius:4px;color:var(--success-text)">'+x+'</div>'}).join('')+'</div></div>'
+    }
+    
+    h+='<div class="form-group" style="margin-top:10px"><label>Балл за вопрос</label><input id="score_'+q.id+'" type="number" value="0" max="'+q.score+'" style="max-width:100px"/></div></div>'
+  }
+  
+  h+='<button onclick="submitCheck(\''+rid+'\')" style="width:100%;margin-top:10px">💾 Сохранить проверку</button>'
+  tc.innerHTML=h
+}
+
+async function submitCheck(rid){
+  var rr=await supabase.from('test_results').select('*,tests(*)').eq('id',rid).single();var res=rr.data;if(!res)return
+  var qr=await supabase.from('test_questions').select('*').eq('test_id',res.test_id)
+  var questions=qr.data||[],totalScore=0
+  
+  for(var i=0;i<questions.length;i++){
+    var scoreEl=document.getElementById('score_'+questions[i].id)
+    if(scoreEl)totalScore+=parseInt(scoreEl.value)||0
+  }
+  
+  await supabase.from('test_results').update({score:totalScore,is_checked:!0,checked_by:currentUser.username,checked_at:new Date().toISOString()}).eq('id',rid)
+  notify('✅','Тест проверен! '+totalScore+'/'+res.max_score+' баллов','success')
+  loadCheckTests()
+}
+
 // ====== СВОЙ ПРОФИЛЬ ======
-async function loadProfile(){var c=document.getElementById('tab-content');if(!c)return;var wr=await supabase.from('warns').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:!1}),br=await supabase.from('bonuses').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:!1}),sr=await supabase.from('monthly_stats').select('*').eq('user_id',currentUser.id).order('month',{ascending:!1}).limit(12),mw=wr.data||[],mb=br.data||[],ms=sr.data||[],nc=currentUser.role_color||'var(--accent)';if(currentUser.is_super_admin)nc='#ffd700';var h='<div class="table-container"><div class="profile-header"><div class="profile-avatar" style="border-color:'+nc+'">'+(currentUser.is_super_admin?'👑':'👤')+'</div><div class="profile-info"><h2 style="color:'+nc+'">'+currentUser.username+'</h2><div class="profile-badges"><span class="badge mode">'+(currentUser.mode||'Без режима')+'</span>'+(currentUser.role_name?'<span class="badge role" style="color:'+nc+';border-color:'+nc+'">'+currentUser.role_name+'</span>':'')+(currentUser.warns>0?'<span class="badge warns">⚠️ '+currentUser.warns+'</span>':'')+'</div></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-value">'+(currentUser.play_hours||0)+'ч</div><div class="stat-label">Часы</div></div><div class="stat-card"><div class="stat-value">'+(currentUser.balance||0)+'₽</div><div class="stat-label">Баланс</div></div><div class="stat-card"><div class="stat-value" style="color:#ffd700">'+(currentUser.pending_salary||0)+'₽</div><div class="stat-label">Ожидает</div></div><div class="stat-card"><div class="stat-value" style="color:var(--success-text)">'+(currentUser.issued_salary||0)+'₽</div><div class="stat-label">Выдано</div></div></div><div class="table-container"><h3>📞 Контакты</h3><div class="contacts-grid"><div class="contact-card"><div class="contact-icon">📋</div><div class="contact-label">VK ID</div><div class="contact-value">'+(currentUser.vk_id?'<a href="https://vk.com/'+currentUser.vk_id+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+currentUser.vk_id+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div><div class="contact-card"><div class="contact-icon">💬</div><div class="contact-label">Discord</div><div class="contact-value" style="cursor:pointer;color:var(--text2)" onclick="navigator.clipboard.writeText(\''+(currentUser.discord||'')+'\');notify(\'📋\',\'Скопировано!\',\'success\')">'+(currentUser.discord||'Не указан')+'</div></div><div class="contact-card"><div class="contact-icon">🌐</div><div class="contact-label">Forum</div><div class="contact-value">'+(currentUser.forum?'<a href="'+currentUser.forum+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+currentUser.forum+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div></div></div>'+(currentUser.admin_notes?'<div class="table-container"><h3>📝 Заметки</h3><p style="color:var(--text2);font-size:var(--font-size-sm)">'+currentUser.admin_notes+'</p></div>':'')+'<button onclick="handleLogout()" class="danger" style="margin:15px 0;width:100%">🚪 Выйти</button><div class="table-container"><h3>⚠️ Варны ('+mw.length+')</h3>';if(mw.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Причина</th><th>Штраф</th><th>Дата</th><th>Истекает</th></tr></thead><tbody>';for(var i=0;i<mw.length;i++)h+='<tr><td>'+mw[i].reason+'</td><td>'+mw[i].fine+'₽</td><td>'+formatDate(mw[i].created_at)+'</td><td>'+(mw[i].expires_at?formatDate(mw[i].expires_at):'Навсегда')+'</td></tr>';h+='</tbody></table>'}h+='</div><div class="table-container"><h3>💰 Премии ('+mb.length+')</h3>';if(mb.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Сумма</th><th>Причина</th><th>Дата</th></tr></thead><tbody>';for(var j=0;j<mb.length;j++)h+='<tr><td style="color:var(--success-text)">+'+mb[j].amount+'₽</td><td>'+mb[j].reason+'</td><td>'+formatDate(mb[j].created_at)+'</td></tr>';h+='</tbody></table>'}h+='</div><div class="table-container"><h3>📊 Статистика</h3>';if(ms.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Месяц</th><th>Часы</th><th>Зарплата</th><th>Варны</th><th>Премии</th></tr></thead><tbody>';for(var s=0;s<ms.length;s++)h+='<tr><td>'+ms[s].month+'</td><td>'+(ms[s].play_hours||0)+'ч</td><td>'+(ms[s].salary||0)+'₽</td><td>'+(ms[s].warns||0)+'</td><td>'+(ms[s].bonuses||0)+'₽</td></tr>';h+='</tbody></table>'}h+='</div>';c.innerHTML=h}
+async function loadProfile(){var c=document.getElementById('tab-content');if(!c)return;var wr=await supabase.from('warns').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:!1}),br=await supabase.from('bonuses').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:!1}),sr=await supabase.from('monthly_stats').select('*').eq('user_id',currentUser.id).order('month',{ascending:!1}).limit(12),tr=await supabase.from('test_results').select('*,tests(title)').eq('user_id',currentUser.id).order('completed_at',{ascending:!1}),mw=wr.data||[],mb=br.data||[],ms=sr.data||[],mt=tr.data||[],nc=currentUser.role_color||'var(--accent)';if(currentUser.is_super_admin)nc='#ffd700';var h='<div class="table-container"><div class="profile-header"><div class="profile-avatar" style="border-color:'+nc+'">'+(currentUser.is_super_admin?'👑':'👤')+'</div><div class="profile-info"><h2 style="color:'+nc+'">'+currentUser.username+'</h2><div class="profile-badges"><span class="badge mode">'+(currentUser.mode||'Без режима')+'</span>'+(currentUser.role_name?'<span class="badge role" style="color:'+nc+';border-color:'+nc+'">'+currentUser.role_name+'</span>':'')+(currentUser.warns>0?'<span class="badge warns">⚠️ '+currentUser.warns+'</span>':'')+'</div></div></div></div><div class="stats-grid"><div class="stat-card"><div class="stat-value">'+(currentUser.play_hours||0)+'ч</div><div class="stat-label">Часы</div></div><div class="stat-card"><div class="stat-value">'+(currentUser.balance||0)+'₽</div><div class="stat-label">Баланс</div></div><div class="stat-card"><div class="stat-value" style="color:#ffd700">'+(currentUser.pending_salary||0)+'₽</div><div class="stat-label">Ожидает</div></div><div class="stat-card"><div class="stat-value" style="color:var(--success-text)">'+(currentUser.issued_salary||0)+'₽</div><div class="stat-label">Выдано</div></div></div><div class="table-container"><h3>📞 Контакты</h3><div class="contacts-grid"><div class="contact-card"><div class="contact-icon">📋</div><div class="contact-label">VK ID</div><div class="contact-value">'+(currentUser.vk_id?'<a href="https://vk.com/'+currentUser.vk_id+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+currentUser.vk_id+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div><div class="contact-card"><div class="contact-icon">💬</div><div class="contact-label">Discord</div><div class="contact-value" style="cursor:pointer;color:var(--text2)" onclick="navigator.clipboard.writeText(\''+(currentUser.discord||'')+'\');notify(\'📋\',\'Скопировано!\',\'success\')">'+(currentUser.discord||'Не указан')+'</div></div><div class="contact-card"><div class="contact-icon">🌐</div><div class="contact-label">Forum</div><div class="contact-value">'+(currentUser.forum?'<a href="'+currentUser.forum+'" target="_blank" style="color:var(--text2);text-decoration:underline">'+currentUser.forum+'</a>':'<span style="color:var(--text2)">Не указан</span>')+'</div></div></div></div>'+(currentUser.admin_notes?'<div class="table-container"><h3>📝 Заметки</h3><p style="color:var(--text2);font-size:var(--font-size-sm)">'+currentUser.admin_notes+'</p></div>':'')+(mt.length>0?'<div class="table-container"><h3>📝 Тесты ('+mt.length+')</h3><table><thead><tr><th>Тест</th><th>Балл</th><th>Статус</th><th>Дата</th></tr></thead><tbody>'+mt.map(function(trr){return'<tr><td>'+(trr.tests?trr.tests.title:'Тест')+'</td><td>'+trr.score+'/'+trr.max_score+'</td><td style="color:'+(trr.is_checked?'var(--success-text)':'#ffd700')+'">'+(trr.is_checked?'✅ Проверено':'⏳ Ожидает')+'</td><td>'+formatDate(trr.completed_at)+'</td></tr>'}).join('')+'</tbody></table></div>':'')+'<button onclick="handleLogout()" class="danger" style="margin:15px 0;width:100%">🚪 Выйти</button><div class="table-container"><h3>⚠️ Варны ('+mw.length+')</h3>';if(mw.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Причина</th><th>Штраф</th><th>Дата</th><th>Истекает</th></tr></thead><tbody>';for(var i=0;i<mw.length;i++)h+='<tr><td>'+mw[i].reason+'</td><td>'+mw[i].fine+'₽</td><td>'+formatDate(mw[i].created_at)+'</td><td>'+(mw[i].expires_at?formatDate(mw[i].expires_at):'Навсегда')+'</td></tr>';h+='</tbody></table>'}h+='</div><div class="table-container"><h3>💰 Премии ('+mb.length+')</h3>';if(mb.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Сумма</th><th>Причина</th><th>Дата</th></tr></thead><tbody>';for(var j=0;j<mb.length;j++)h+='<tr><td style="color:var(--success-text)">+'+mb[j].amount+'₽</td><td>'+mb[j].reason+'</td><td>'+formatDate(mb[j].created_at)+'</td></tr>';h+='</tbody></table>'}h+='</div><div class="table-container"><h3>📊 Статистика</h3>';if(ms.length===0)h+='<p style="color:var(--text2)">Нет</p>';else{h+='<table><thead><tr><th>Месяц</th><th>Часы</th><th>Зарплата</th><th>Варны</th><th>Премии</th></tr></thead><tbody>';for(var s=0;s<ms.length;s++)h+='<tr><td>'+ms[s].month+'</td><td>'+(ms[s].play_hours||0)+'ч</td><td>'+(ms[s].salary||0)+'₽</td><td>'+(ms[s].warns||0)+'</td><td>'+(ms[s].bonuses||0)+'₽</td></tr>';h+='</tbody></table>'}h+='</div>';c.innerHTML=h}
 
 // ====== РОЛИ ======
 async function loadRoles(){var c=document.getElementById('tab-content');if(!c)return;var q=supabase.from('roles').select('*').order('priority',{ascending:!1});if(!currentUser.is_super_admin&&currentUser.admin_mode)q=q.eq('mode',currentUser.admin_mode);var r=await q;if(r.data)roles=r.data;var h='<div class="table-container"><h3>🎨 Должности</h3><button onclick="showCreateRole()" style="margin-bottom:15px">+ Создать</button><table><thead><tr><th>Название</th><th>Цвет</th><th>Пр.</th><th>Режим</th><th>Зарплата</th><th>Штраф</th><th></th></tr></thead><tbody>';for(var i=0;i<roles.length;i++){var ro=roles[i],st=ro.salary_type==='fixed'?'Фикс: '+(ro.salary_value||0)+'₽':'Час: '+(ro.salary_value||0)+'₽';h+='<tr><td style="color:'+ro.color+'">'+ro.name+'</td><td><span style="display:inline-block;width:16px;height:16px;background:'+ro.color+';border:1px solid var(--border);border-radius:4px"></span></td><td>'+ro.priority+'</td><td>'+ro.mode+'</td><td>'+st+'</td><td>'+(ro.warn_fine||0)+'₽</td><td><button onclick="editRole(\''+ro.id+'\')" style="font-size:var(--font-size-sm);padding:4px 8px">✏️</button> <button onclick="deleteRole(\''+ro.id+'\')" class="danger" style="font-size:var(--font-size-sm);padding:4px 8px">✕</button></td></tr>'}h+='</tbody></table></div>';c.innerHTML=h}
 function showCreateRole(){var modes=['Выживание','Гриферский','РП-Школа','Анархия','SKYPVP'],opts='';for(var i=0;i<modes.length;i++)opts+='<option>'+modes[i]+'</option>';var m=document.createElement('div');m.className='modal-overlay';m.innerHTML='<div class="modal"><h3>🎨 Новая должность</h3><div class="form-group"><label>Название</label><input id="role-name"/></div><div class="form-group"><label>Цвет</label><input id="role-color" type="color" value="#d4a574"/></div><div class="form-group"><label>Приоритет</label><input id="role-priority" type="number" value="1"/></div><div class="form-group"><label>Режим</label><select id="role-mode">'+opts+'</select></div><div class="form-group"><label>Тип зарплаты</label><select id="role-salary-type"><option value="hourly">Почасовая</option><option value="fixed">Фиксированная</option></select></div><div class="form-group"><label>Сумма</label><input id="role-salary-value" type="number" value="0"/></div><div class="form-group"><label>Штраф</label><input id="role-warn-fine" type="number" value="100"/></div><button onclick="createRole()">Создать</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>';document.body.appendChild(m)}
-async function createRole(){var n=document.getElementById('role-name').value;if(!n)return alert('Введите название');var r=await supabase.from('roles').insert({name:n,color:document.getElementById('role-color').value,priority:parseInt(document.getElementById('role-priority').value)||0,mode:document.getElementById('role-mode').value,salary_type:document.getElementById('role-salary-type').value,salary_value:parseInt(document.getElementById('role-salary-value').value)||0,warn_fine:parseInt(document.getElementById('role-warn-fine').value)||0});if(r.error)alert('Ошибка: '+r.error.message);else{document.querySelector('.modal-overlay').remove();loadRoles();notify('✅','Должность создана','success')}}
+async function createRole(){var n=document.getElementById('role-name').value;if(!n)return alert('Введите название');var r=await supabase.from('roles').insert({name:n,color:document.getElementById('role-color').value,priority:parseInt(document.getElementById('role-priority').value)||0,mode:document.getElementById('role-mode').value,salary_type:document.getElementById('role-salary-type').value,salary_value:parseInt(document.getElementById('role-salary-value').value)||0,warn_fine:parseInt(document.getElementById('role-warn-fine').value)||0,permissions:{}});if(r.error)alert('Ошибка: '+r.error.message);else{document.querySelector('.modal-overlay').remove();loadRoles();notify('✅','Должность создана','success')}}
 async function editRole(rid){var ro=null;for(var i=0;i<roles.length;i++){if(roles[i].id===rid){ro=roles[i];break}};if(!ro)return;var modes=['Выживание','Гриферский','РП-Школа','Анархия','SKYPVP'],opts='';for(var j=0;j<modes.length;j++)opts+='<option value="'+modes[j]+'"'+(ro.mode===modes[j]?' selected':'')+'>'+modes[j]+'</option>';var m=document.createElement('div');m.className='modal-overlay';m.innerHTML='<div class="modal"><h3>✏️ Изменить</h3><div class="form-group"><label>Название</label><input id="edit-role-name" value="'+ro.name+'"/></div><div class="form-group"><label>Цвет</label><input id="edit-role-color" type="color" value="'+ro.color+'"/></div><div class="form-group"><label>Приоритет</label><input id="edit-role-priority" type="number" value="'+ro.priority+'"/></div><div class="form-group"><label>Режим</label><select id="edit-role-mode">'+opts+'</select></div><div class="form-group"><label>Тип</label><select id="edit-role-salary-type"><option value="hourly"'+(ro.salary_type==='hourly'?' selected':'')+'>Почасовая</option><option value="fixed"'+(ro.salary_type==='fixed'?' selected':'')+'>Фиксированная</option></select></div><div class="form-group"><label>Сумма</label><input id="edit-role-salary-value" type="number" value="'+(ro.salary_value||0)+'"/></div><div class="form-group"><label>Штраф</label><input id="edit-role-warn-fine" type="number" value="'+(ro.warn_fine||0)+'"/></div><button onclick="updateRole(\''+rid+'\')">💾</button> <button onclick="this.closest(\'.modal-overlay\').remove()">Отмена</button></div>';document.body.appendChild(m)}
 async function updateRole(rid){await supabase.from('roles').update({name:document.getElementById('edit-role-name').value,color:document.getElementById('edit-role-color').value,priority:parseInt(document.getElementById('edit-role-priority').value)||0,mode:document.getElementById('edit-role-mode').value,salary_type:document.getElementById('edit-role-salary-type').value,salary_value:parseInt(document.getElementById('edit-role-salary-value').value)||0,warn_fine:parseInt(document.getElementById('edit-role-warn-fine').value)||0}).eq('id',rid);document.querySelector('.modal-overlay').remove();loadRoles();notify('✅','Должность обновлена','success')}
 async function deleteRole(rid){if(!confirm('Удалить?'))return;await supabase.from('roles').delete().eq('id',rid);loadRoles();notify('🗑','Должность удалена','info')}
@@ -187,5 +452,4 @@ function navigateTo(p){currentPage=p;renderApp()}
 
 // ====== ЗАПУСК ======
 applyTheme();applyFont();createParticles()
-
 if(supabase){if(loadSession()){supabase.from('users').select('*,roles(*)').eq('id',currentUser.id).single().then(function(r){if(r.data){if(r.data.is_blocked){clearSession();currentUser=null}else{currentUser.pending_salary=r.data.pending_salary;currentUser.issued_salary=r.data.issued_salary;currentUser.balance=r.data.balance;currentUser.play_hours=r.data.play_hours;currentUser.warns=r.data.warns;currentUser.vk_id=r.data.vk_id;currentUser.discord=r.data.discord;currentUser.forum=r.data.forum;currentUser.admin_notes=r.data.admin_notes;currentUser.warnings_count=r.data.warnings_count;currentUser.role_id=r.data.role_id;currentUser.role_name=r.data.roles?r.data.roles.name:null;currentUser.role_color=r.data.roles?r.data.roles.color:null;saveSession()}}renderApp()})}else{supabase.from('modes').select('*').then(function(r){modes=(r.data&&r.data.length>0)?r.data:[{name:'Выживание'},{name:'Гриферский'},{name:'РП-Школа'},{name:'Анархия'},{name:'SKYPVP'},{name:'Другое'}];renderApp()})}}
